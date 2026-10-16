@@ -1153,7 +1153,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
     const br = sdBridge(id, beh); if(br) why.unshift(br);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
-    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, start:heroStart(id), depth:heroDepth(id)});
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
   }
   out.sort((x,y)=>y.score-x.score);
   // keep the three picks different from each other
@@ -1248,7 +1248,7 @@ function sdBridge(id, beh){
   const s = heroStart(id), dp = heroDepth(id);
   const easyLike = beh.loved.find(h=>heroStart(h.id)===s && h.id!==id && s>=0.5);
   const deepLike = beh.loved.find(h=>heroDepth(h.id)===dp && h.id!==id && dp===1 && (!easyLike || h.id!==easyLike.id));
-  if(easyLike && deepLike) return `Начинать легко, как на ${HERO[easyLike.id].n}, а дальше интересно, как на ${HERO[deepLike.id].n}.`;
+  if(easyLike && deepLike) return s===1 ? `Начинать легко, как на ${HERO[easyLike.id].n}, а дальше интересно, как на ${HERO[deepLike.id].n}.` : `Начало как на ${HERO[easyLike.id].n}, а дальше интересно, как на ${HERO[deepLike.id].n}.`;
   if(easyLike && s===1) return `Начинать так же легко, как на ${HERO[easyLike.id].n}.`;
   if(deepLike) return `Глубина как у ${HERO[deepLike.id].n}: есть что осваивать.`;
   return null;
@@ -1483,12 +1483,11 @@ function drawResult(){
     <span class="eyebrow">Твой стиль</span>
     <h2>Ты — ${esc(DIMS[k1].t.toLowerCase())}</h2>
     <p>Тебе в кайф ${esc(DIMS[k1].s)}. А ещё — ${esc(DIMS[k2].s)}.</p>
-    ${ins.length?`<ul class="ins2">${ins.slice(0,2).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
-    <div class="needs">
+        <div class="needs">
       <div class="nd"><div class="nl"><span>Старт</span><b>${nd.start>=0.6?"нужен лёгкий":nd.start>=0.35?"обычный":"можно и тяжёлый"}</b></div><i><b style="width:${Math.round(nd.start*100)}%"></b></i><div class="nh">насколько легко должно быть в начале игры</div></div>
       <div class="nd"><div class="nl"><span>Глубина</span><b>${nd.depth>=0.65?"нужен сложный":nd.depth>=0.35?"средняя":"попроще"}</b></div><i><b style="width:${Math.round(nd.depth*100)}%"></b></i><div class="nh">насколько интересно и сложно дальше</div></div>
     </div>
-    ${nd.ev.length?`<ul class="ins2">${nd.ev.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+    ${(ins.slice(0,1).length||nd.ev.length)?`<ul class="ins2">${[...ins.slice(0,1),...nd.ev].slice(0,3).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
     <div class="rolepick"><span class="muted">Подбираю на роли, где ты реально играешь:</span>${[1,2,3,4,5].map(x=>`<button type="button" class="qc sm${curRoles.includes(x)?" on":""}" data-rp="${x}">${x} · ${POS[x]}${roles&&!PREFS.roles.length?` <span class="pc">${Math.round((roles.list.find(r=>r.p===x)?.share||0)*100)}%</span>`:""}</button>`).join("")}</div>
     ${PREFS.like.length?`<div class="likedrow"><span class="muted">Тебе интересны:</span>${PREFS.like.map(id=>HERO[id]?`<button type="button" class="bc lk2" data-unlike="${id}">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div>`:""}
   </section>
@@ -1500,7 +1499,7 @@ function drawResult(){
       <div class="big-b">
         <h2>${esc(hero.name)}</h2>
         <div class="tags">${dimTags(hero.dims)}</div>${sdTags(hero)}
-        <div class="hc-m"><span class="rc">${esc(POS[hero.pos[0]])}</span> ${meta(hero)}</div>
+        <div class="hc-m"><span class="rc">${esc(POS[hero.rolePos])}</span> ${meta(hero)}</div>
         ${why(hero)}
         <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Интересно</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
@@ -1508,7 +1507,7 @@ function drawResult(){
     ${top.length>1?`<div class="eyebrow" style="margin-top:8px">И ещё двое</div>
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
-      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">${esc(POS[h.pos[0]])}</span> ${meta(h)}</div>${why(h)}
+      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">${esc(POS[h.rolePos])}</span> ${meta(h)}</div>${why(h)}
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
     <div class="posline">«Интересно» — подберу ещё похожих. «Не моё» — уберу и учту, что такое тебе не заходит.</div>
