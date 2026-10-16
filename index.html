@@ -237,6 +237,52 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
 .parse button{background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:8px;padding:8px 14px;cursor:pointer}
 .parse button:disabled{opacity:.7;cursor:progress}
 
+
+/* quiz */
+#quiz{display:flex;flex-direction:column;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.q{display:flex;flex-direction:column;gap:8px}
+.q.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:640px){.q.two{grid-template-columns:minmax(0,1fr)}}
+.ql{font-size:13.5px;font-weight:600}
+.ql span{font-weight:400;color:var(--muted)}
+.chips-q{display:flex;flex-wrap:wrap;gap:6px}
+.qc{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13.5px;cursor:pointer}
+.qc:hover{border-color:var(--muted)}
+.qc.on{background:var(--gold);border-color:var(--gold);color:#1a1408;font-weight:600}
+.qc.sm{padding:5px 11px;font-size:13px}
+.ban{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ban input{flex:1 1 220px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.bc{background:var(--bad-soft);border:0;border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--fg)}
+/* main pick */
+.pick{display:flex;flex-direction:column;gap:16px}
+.pick-role{display:flex;flex-direction:column;gap:8px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.pick-role h2{font-size:clamp(34px,6vw,48px);display:flex;align-items:baseline;gap:12px}
+.pick-role .pn{color:var(--gold)}
+.pick-role p{margin:0;max-width:62ch;font-size:16px}
+.alt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.alt .muted{margin-right:4px}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.trio{grid-template-columns:minmax(0,1fr)}}
+.hc{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.hc-img .himg{width:100%;height:auto;aspect-ratio:16/9;border-radius:0;font-size:20px;max-width:100%}
+.hc-b{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.hc-n{font-family:var(--display);font-size:24px;line-height:1.1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hc-m{font-size:12.5px;color:var(--muted)}
+.hc ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:14px;flex:1}
+.hc li{padding-left:14px;position:relative}
+.hc li::before{content:"";position:absolute;left:0;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.cx{display:inline-flex;gap:3px}
+.cx i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block}
+.cx i.on{background:var(--gold)}
+.nope{align-self:flex-start;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.nope:hover{border-color:var(--bad);color:var(--bad)}
+.more{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13.5px}
+.mh2{display:inline-flex;align-items:center;gap:6px}
+.hint-q{font-size:13.5px;color:var(--gold)}
+details.deep{border-top:1px solid var(--line);padding-top:14px}
+details.deep summary{cursor:pointer;font-weight:600;font-size:15px;padding:6px 0;color:var(--gold)}
+.deep-in{display:flex;flex-direction:column;gap:30px;padding-top:18px}
+
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -245,7 +291,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   <header class="head">
     <span class="eyebrow">Dota 2 · разбор по навыкам</span>
     <h1>Пик по скиллу</h1>
-    <p>Вставь свой ID или ссылку на профиль. Страница возьмёт твои матчи с OpenDota, разберёт последние матчи целиком, со всеми десятью игроками, и скажет, на какой роли тебе играть и почему, каких новых героев попробовать и от чего отказаться.</p>
+    <p>Вставь ссылку на профиль и отметь, что тебе нравится в игре. Получишь роль и трёх новых героев под тебя — с короткой причиной для каждого.</p>
     <form class="search" id="f" novalidate>
       <input id="q" name="q" autocomplete="off" placeholder="Код друга из Доты, SteamID64 или ссылка Dotabuff / OpenDota / Stratz / Steam" aria-label="ID или ссылка на профиль">
       <select id="period" aria-label="Период">
@@ -262,6 +308,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       <button id="go" type="submit">Разобрать</button>
     </form>
     <div class="hint">Профиль должен быть открыт: в Доте включи «Общедоступная история матчей» (Expose Public Match Data).</div>
+    <div id="quiz"></div>
     <div id="msg"></div>
   </header>
   <main id="out"></main>
@@ -769,13 +816,10 @@ function analyze(d){
 
   // I. plan
   const adv = [];
-  const r1 = roles[0];
-  if(r1) adv.push({lvl:"good",t:`Играй ${POS_RU_ON[r1.pos]}`,d: r1.pros.length? "Почему: "+r1.pros.slice(0,2).join("; ")+"." : "Это лучший вариант по совокупности побед и навыков."});
   if(bestType && worstType && bestType!==worstType && bestType.wr!=null && worstType.wr!=null){
     const gap = Math.round((bestType.wr-worstType.wr)*100);
     if(gap>=8 && worstType.share>=0.1) adv.push({lvl:"bad",t:`Меньше героев типа «${TYPES[worstType.key].name}»`,d:`Ты берёшь их в ${pct(worstType.share)}% игр и выигрываешь ${pct(worstType.wr)}%. На героях своего типа у тебя ${pct(bestType.wr)}%.`});
   }
-  if(rec.fresh[0]) adv.push({lvl:"good",t:`Новый герой на пробу: ${rec.fresh[0].name}`,d:`Сыграй 5–10 игр подряд, чтобы понять героя. ${rec.fresh[0].why[0] ? "Почему: "+rec.fresh[0].why[0]+"." : ""}`});
   if(skills){
     const sorted = AXES.map(a=>({...a,v:skills[a.k]})).sort((a,b)=>a.v-b.v);
     const weak = sorted[0];
@@ -784,18 +828,110 @@ function analyze(d){
   if(team && team.kpLoss!=null && team.kpWin!=null && team.kpWin-team.kpLoss>=0.08) adv.push({lvl:"warn",t:`В проигранных играх ты реже на драках: ${pct(team.kpLoss)}% против ${pct(team.kpWin)}%`,d:"Когда игра идёт плохо, ты уходишь фармить отдельно. Лучше держаться с командой и забирать драки вместе."});
   if(cur && prev && cur.g>=20 && prev.g>=20 && cur.w/cur.g < prev.w/prev.g-0.03) adv.push({lvl:"warn",t:`Просадка в патче ${patchName(cur.k)}: ${pct(cur.w/cur.g)}% против ${pct(prev.w/prev.g)}%`,d:"Сравни, каких героев ты стал брать чаще. Часто просадка идёт от героев не твоего типа."});
 
-  return {games,p0,heroes,typeList,bestType,worstType,skills,perMatchN:perMatch.length,posList,roles,rows,team,rec,core,skip,bracket,hasMeta:!!d.heroStats,patchArr,T,recent,recentW,adv};
+  return {meta,games,p0,heroes,typeList,bestType,worstType,skills,perMatchN:perMatch.length,posList,roles,rows,team,rec,core,skip,bracket,hasMeta:!!d.heroStats,patchArr,T,recent,recentW,adv};
 }
 const POS_RU_ON = {1:"на керри (1)",2:"на миде (2)",3:"на оффлейне (3)",4:"на четвёрке (4)",5:"на пятёрке (5)"};
+
+/* ===== What the player wants: quiz → role and new heroes ===== */
+const HARD = new Set([74,82,66,91,92,113,34,86,107,10,111,13,17,106,145,126,120,80,61,105,89,12,79,90,103,114,65,55,46,131]);
+const EASY = new Set([2,99,5,49,6,8,31,26,84,57,44,35,18,47,30,42,22,4,96,81,64,104,48,36,60,15,27,101,28,71,29,70,40,20,37,102,108,85,54,94,72,95,32,62,135,137,59,83]);
+const complexity = id => HARD.has(id)?3:EASY.has(id)?1:2;
+
+const LIKES = {
+  farm:{t:"Фармить и стать монстром к концу", why:"ты любишь фармить и разносить к концу — это его игра"},
+  kill:{t:"Убивать и гангать", why:"ты любишь убивать и гангать — у него для этого всё есть"},
+  mech:{t:"Переигрывать механикой", why:"ты любишь переигрывать руками — на нём есть где"},
+  fight:{t:"Начинать драки и держать удар", why:"ты любишь начинать драки — у него есть чем"},
+  team:{t:"Спасать и помогать команде", why:"ты любишь вытаскивать команду — он как раз для этого"},
+  push:{t:"Ломать башни и давить карту", why:"ты любишь давить и ломать башни — он делает это быстро"}
+};
+const GOALS = {rating:"Поднять рейтинг", fun:"Кайфовать от игры", learn:"Освоить новое"};
+const DEFAULT_PREFS = {goal:"learn", likes:[], role:"auto", cx:"any", atk:"any", ban:[]};
+
+function likeMatch(id, like){
+  const h = HERO[id]; if(!h) return 0;
+  const r = h.r, tp = TP[id]||"", ps = tp.slice(1), t = tp[0];
+  const has = x => r.includes(x) ? 1 : 0;
+  let v = 0;
+  if(like==="farm") v = .55*has("Carry") + (t==="F"?.45:0) + (ps.includes("1")?.1:0);
+  if(like==="kill") v = .35*has("Nuker") + .3*has("Escape") + ((ps.includes("2")||ps.includes("4"))?.25:0) + (t==="T"?.15:0) - .3*has("Support")*(t==="S"?1:0);
+  if(like==="mech") v = (t==="T"?.6:0) + (complexity(id)===3?.5:complexity(id)===2?.15:0);
+  if(like==="fight") v = .45*has("Initiator") + .3*has("Durable") + (t==="I"?.35:0) - (t==="F"?.25:0);
+  if(like==="team") v = ((ps.includes("4")||ps.includes("5")) ? .45*has("Support") + .25*has("Disabler") : 0) + (t==="S"?.35:0);
+  if(like==="push") v = .65*has("Pusher") + (t==="F"?.2:0);
+  return Math.max(0, Math.min(1, v));
+}
+const ROLE_FROM_LIKE = {farm:{1:4,2:2}, kill:{2:3,4:3}, mech:{2:4,4:1}, fight:{3:4,4:2}, team:{5:4,4:3}, push:{1:2,3:2}};
+
+function chooseRole(a, prefs){
+  if(prefs.role!=="auto") { const r = a.roles.find(x=>x.pos===+prefs.role); return {pos:+prefs.role, r, chosen:true}; }
+  const total = a.rows.length || 1;
+  const sc = a.roles.map(r=>{
+    let s = r.score * (prefs.goal==="rating"?1.5: prefs.goal==="fun"?0.6:0.8);
+    for(const l of prefs.likes) s += ((ROLE_FROM_LIKE[l]||{})[r.pos]||0) * 4;
+    if(prefs.goal==="learn" && r.n/total < 0.15 && r.heroG>=20) s += 2;
+    return {r, s};
+  }).sort((x,y)=>y.s-x.s);
+  return {pos:sc[0].r.pos, r:sc[0].r, alt:sc.slice(1,3).map(x=>x.r.pos), chosen:false};
+}
+
+function pickHeroes(a, prefs, pos){
+  const played = new Map(a.heroes.map(h=>[h.id,h]));
+  const ban = new Set(prefs.ban.map(Number));
+  const beta = fitPreference(a.heroes, a.p0);
+  const strong = a.heroes.filter(h=>h.games>=8 && h.adj>a.p0+0.01);
+  const wLike = prefs.goal==="fun"?50: prefs.goal==="learn"?40:25;
+  const wStat = prefs.goal==="rating"?1.0:0.6;
+  const out = [];
+  for(const id of Object.keys(HERO).map(Number)){
+    const tp = TP[id]||""; if(!tp.slice(1).includes(String(pos))) continue;
+    if(ban.has(id)) continue;
+    const g = played.get(id)?.games||0; if(g>=5) continue;          // only heroes you have not really played
+    const v = heroVec(id); if(!v) continue;
+    const likeScores = prefs.likes.map(l=>({l, v:likeMatch(id,l)}));
+    const like = likeScores.length ? likeScores.reduce((s,x)=>s+x.v,0)/likeScores.length : 0.5;
+    const cx = complexity(id);
+    const cxPen = prefs.cx==="any"?0: Math.abs(cx-{easy:1,mid:2,hard:3}[prefs.cx])*8;
+    const ranged = HERO[id].m==="Ranged";
+    const atkPen = prefs.atk==="any"?0: ((prefs.atk==="ranged")===ranged ? 0 : 10);
+    const pred = beta ? v.reduce((s,x,i)=>s+x*beta[i],0) : 0;
+    let fit = 0; if(a.skills){ const dm=heroDemand(id); for(const k in dm) fit += dm[k]*(a.skills[k]-0.5); }
+    const m = a.meta[id] ?? null;
+    const score = like*wLike + pred*wStat + fit*100*0.25*wStat + (m!=null?(m-0.5)*100*0.4*wStat:0) - cxPen - atkPen;
+    // short reasons: what you said first, then one fact from your games
+    const why = [];
+    const topLike = likeScores.sort((x,y)=>y.v-x.v)[0];
+    if(topLike && topLike.v>=0.6) why.push(LIKES[topLike.l].why);
+    let sim=null; for(const s of strong){ if(ban.has(s.id)) continue; const c=cos(v,heroVec(s.id)); if(!sim||c>sim.c) sim={h:s,c}; }
+    const facts = [];
+    if(sim && sim.c>=0.75 && sim.h.wr>=a.p0+0.03) facts.push(`играется похоже на ${sim.h.name}, где у тебя ${Math.round(sim.h.wr*100)}%`);
+    if(m!=null && m>=0.52) facts.push(`сейчас силён на твоём ранге: ${Math.round(m*100)}% побед`);
+    if(a.skills){ const dm=heroDemand(id); const k=Object.keys(dm).filter(k=>dm[k]>=0.25 && a.skills[k]>=0.55).sort((x,y)=>dm[y]*a.skills[y]-dm[x]*a.skills[x])[0];
+      if(k) facts.push(`ему нужен ${AXES.find(x=>x.k===k).name.toLowerCase()} — это у тебя сильная сторона`); }
+    if(!why.length && pred>=1.5) facts.push(`по чертам героя он подходит тебе лучше среднего`);
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, score, why, facts});
+  }
+  out.sort((x,y)=>y.score-x.score);
+  // each card gets one fact of its own, so the three cards do not repeat each other
+  const used = new Set();
+  for(const h of out){ const f = h.facts.find(x=>!used.has(x.split(" ")[0]+x.split(" ")[1])) || null;
+    if(f){ used.add(f.split(" ")[0]+f.split(" ")[1]); h.why=[...h.why,f]; } h.why=h.why.slice(0,2); }
+  return out;
+}
 
 /* ===== Rendering ===== */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = n => String(n).split(/[\s'-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
-function heroImg(h, sm){
-  const src = ICON[h.id] || (h.slug ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.slug}.png` : null);
-  return `<div class="himg${sm?" sm":""}" data-i="${esc(initials(h.name))}">${src?`<img src="${src}" alt="${esc(h.name)}">`:esc(initials(h.name))}</div>`;
+function heroImg(h, sm, big){
+  const cdn = h.slug ? `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${h.slug}.png` : null;
+  const src = big ? (cdn || ICON[h.id]) : (ICON[h.id] || cdn);
+  const fb = big && ICON[h.id] ? ` data-fb="${ICON[h.id]}"` : "";
+  return `<div class="himg${sm?" sm":""}" data-i="${esc(initials(h.name))}">${src?`<img src="${src}"${fb} alt="${esc(h.name)}">`:esc(initials(h.name))}</div>`;
 }
-document.addEventListener("error", e=>{ const t=e.target; if(t.tagName==="IMG" && t.parentElement?.classList.contains("himg")){ const p=t.parentElement; p.textContent=p.dataset.i; } }, true);
+document.addEventListener("error", e=>{ const t=e.target; if(t.tagName!=="IMG" || !t.parentElement?.classList.contains("himg")) return;
+  if(t.dataset.fb){ const f=t.dataset.fb; delete t.dataset.fb; t.src=f; return; }
+  const p=t.parentElement; p.textContent=p.dataset.i; }, true);
+const plural = (n, a, b, c) => { const m10=n%10, m100=n%100; return m10===1&&m100!==11?a: m10>=2&&m10<=4&&(m100<10||m100>=20)?b:c; };
 const wrColor = (wr,p0) => wr==null?"var(--muted)": wr>=p0+0.03?"var(--good)": wr<=p0-0.03?"var(--bad)":"var(--gold)";
 const skColor = v => v==null?"var(--muted)": v>=0.55?"var(--good)": v<0.42?"var(--bad)":"var(--gold)";
 const sign = x => (x>0?"+":x<0?"−":"")+Math.abs(Math.round(x));
@@ -826,10 +962,7 @@ function radar(sk){
   </svg>`;
 }
 
-function render(d, isDemo){
-  const a = analyze(d);
-  const out = document.getElementById("out");
-  if(!a.games){ out.innerHTML = `<div class="notice err">В этом профиле нет рейтинговых игр за выбранный период. Попробуй «Всё время».</div>`; return; }
+function detailsHTML(d, a, isDemo){
   const p = d.profile, rt = p.rank_tier;
   const medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
   const B=a.bestType, W=a.worstType;
@@ -859,47 +992,9 @@ function render(d, isDemo){
   const comeList = uniqueWhy(a.rec.comeback);
   const likes = a.rec.likes.filter(x=>Math.abs(x.b)>=0.8);
 
-  out.innerHTML = `
-  ${isDemo?`<div class="notice demo">Пример на реальном открытом профиле. Введи свой ID сверху, чтобы увидеть свой разбор.</div>`:""}
-  <div class="player">
-    <div class="avatar">${p.avatarfull?`<img src="${esc(p.avatarfull)}" alt="" onerror="this.parentElement.textContent='${esc(initials(p.personaname||"?"))}'">`:esc(initials(p.personaname||"?"))}</div>
-    <div class="who"><div class="name">${esc(p.personaname||"Игрок "+p.account_id)}</div><div class="muted" style="font-size:13px">ID ${esc(p.account_id)} · <a href="https://www.opendota.com/players/${esc(p.account_id)}" target="_blank" rel="noopener">OpenDota</a> · <a href="https://www.dotabuff.com/players/${esc(p.account_id)}" target="_blank" rel="noopener">Dotabuff</a></div></div>
-    <div class="stats">
-      <div class="stat"><div class="v">${a.games}</div><div class="l">игр</div></div>
-      <div class="stat"><div class="v" style="color:${wrColor(a.p0,.5)}">${pct(a.p0)}%</div><div class="l">побед</div></div>
-      <div class="stat"><div class="v" style="font-family:var(--display);font-size:21px">${esc(medal)}</div><div class="l">медаль</div></div>
-    </div>
-  </div>
-
-  <div class="verdict">
-    <span class="eyebrow">Вердикт</span>
-    <h2>Твоё место — ${esc(POS[r1.pos].toLowerCase())}${B?`, твои герои — ${esc(TYPES[B.key].name.toLowerCase())}`:""}</h2>
-    <p>${r1.pros.length?esc((t=>t[0].toUpperCase()+t.slice(1))(r1.pros.slice(0,3).join("; ")))+".":""} ${B&&W&&B!==W?`На героях типа «${esc(TYPES[B.key].name)}» у тебя <b class="num">${pct(B.wr)}%</b> побед, на «${esc(TYPES[W.key].name)}» — <b class="num">${pct(W.wr)}%</b>.`:""}</p>
-    <div class="chips">
-      ${r2?`<span class="chip">Запасная роль: <b>${r2.pos} · ${POS[r2.pos]}</b></span>`:""}
-      ${freshList[0]?`<span class="chip">Новый герой на пробу: <b>${esc(freshList[0].name)}</b></span>`:""}
-      ${a.skip.length?`<span class="chip">Отложить: <b>${a.skip.slice(0,2).map(h=>esc(h.name)).join(", ")}</b></span>`:""}
-    </div>
-  </div>
-
+  return `
   <section>
-    <div class="sec-head"><span class="eyebrow">01 · Роли</span><h2>Варианты ролей и почему</h2>
-      <p>${a.rows.length?`В каждом из ${a.rows.length} последних матчей мы определили, на какой позиции ты реально стоял: по героям обеих команд и по тому, кто сколько нафармил. Потом сравнили тебя с соперником на той же позиции и посмотрели, как с тобой играет твой керри.`:"Позиция оценена по твоим героям: подробных матчей в этом просмотре нет."}</p></div>
-    <div class="roles">${[r1,r2,r3].filter(Boolean).map(roleCard).join("")}</div>
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="eyebrow">02 · Новые герои</span><h2>Ты их не пробовал, но они под тебя</h2>
-      <p>Модель учится на всех твоих героях: какие черты героя (роль, тип атаки, атрибут, стиль) поднимают твой процент побед, а какие опускают. Потом добавляет совпадение с твоими навыками, похожесть на героев, где ты уже выигрываешь${a.hasMeta?", и силу героя на твоём ранге":""}.</p></div>
-    ${likes.length?`<div class="likes"><span class="mini">Тебе заходят</span>${likes.filter(x=>x.b>0).slice(0,5).map(x=>`<span class="lk good">${esc(FEAT_RU[x.f]||x.f)} <b class="num">${sign(x.b)}</b></span>`).join("")}
-      <span class="mini">Не заходят</span>${likes.filter(x=>x.b<0).slice(-4).reverse().map(x=>`<span class="lk bad">${esc(FEAT_RU[x.f]||x.f)} <b class="num">${sign(x.b)}</b></span>`).join("")}
-      <span class="mini" style="flex-basis:100%">Число — сколько процентов побед добавляет или отнимает эта черта героя именно у тебя.</span></div>`:""}
-    <div class="fresh">${freshList.map(h=>`<article class="fh">${heroImg(h)}<div class="tx"><div class="nm">${esc(h.name)} <span class="muted" style="font-weight:400;font-size:12.5px">· позиция ${h.pos.split("").join(" или ")}</span></div><ul>${h.whyU.map(w=>`<li>${esc(w)}</li>`).join("")}</ul></div></article>`).join("")||`<div class="empty">Недостаточно данных для подбора.</div>`}</div>
-    ${comeList.length?`<div class="sub-h">Стоит вернуться: играл мало, но они под тебя</div><div class="cols-4">${comeList.map(h=>heroItem(h,`${h.g} игр · ${esc(h.whyU[0]||"")}`)).join("")}</div>`:""}
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="eyebrow">03 · Навыки</span><h2>Что ты умеешь</h2>
+    <div class="sec-head"><span class="eyebrow">Навыки</span><h2>Что ты умеешь</h2>
       <p>Каждая игра сравнивается с тысячами игр других людей на том же герое. 50 — как у среднего игрока на этом герое, 80 — лучше, чем у 80% игроков.</p></div>
     ${a.skills?`<div class="skills">${radar(a.skills)}
       <div class="sk">${AXES.map(x=>{const v=a.skills[x.k];return `<div class="row"><b>${esc(x.name)}</b><span class="n" style="color:${skColor(v)}">${Math.round(v*100)}</span><div class="tr"><i style="width:${v*100}%;background:${skColor(v)}"></i><u></u></div></div>`}).join("")}
@@ -914,7 +1009,7 @@ function render(d, isDemo){
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">04 · Стиль</span><h2>Типы героев</h2>
+    <div class="sec-head"><span class="eyebrow">Типы героев</span><h2>Типы героев</h2>
       <p>Вертикальная черта — твой средний процент побед (${pct(a.p0)}%), светлая полоска — где реально может быть процент при таком числе игр.</p></div>
     <div class="bars">
       ${types.map(t=>`<div class="bar">
@@ -933,7 +1028,7 @@ function render(d, isDemo){
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">05 · Тренд</span><h2>Куда ты движешься</h2></div>
+    <div class="sec-head"><span class="eyebrow">Тренд</span><h2>Куда ты движешься</h2></div>
     <div class="trend">
       <div class="box"><div class="lbl">Процент побед по патчам</div>
         ${a.patchArr.length?`<div class="patches"><div class="ref" style="bottom:${pH(.5)}%"><span>50%</span></div>
@@ -949,7 +1044,7 @@ function render(d, isDemo){
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">06 · Матчи</span><h2>Последние игры</h2>
+    <div class="sec-head"><span class="eyebrow">Матчи</span><h2>Последние игры</h2>
       <p>Позиция определена по обеим командам. «Линия» — опыт в минуту против соперника на той же позиции. Оценка 0–100 — твоя игра против нормы для героя.</p></div>
     <div class="tbl"><table>
       <thead><tr><th>Герой</th><th>Итог</th><th class="r">Поз.</th><th class="r">У / С / П</th><th class="r">Участие</th><th class="r">Линия</th><th>Оценка</th></tr></thead>
@@ -967,7 +1062,7 @@ function render(d, isDemo){
   </section>
 
   <section>
-    <div class="sec-head"><span class="eyebrow">07 · План</span><h2>Что делать дальше</h2></div>
+    <div class="sec-head"><span class="eyebrow">План</span><h2>Что делать дальше</h2></div>
     <div class="advice">${a.adv.map(x=>`<div class="adv ${x.lvl}"><div class="s"></div><div><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div></div>`).join("")||`<div class="empty">Явных проблем не видно.</div>`}</div>
   </section>
 
@@ -977,11 +1072,111 @@ function render(d, isDemo){
       <li><b>Позиция в каждой игре.</b> Берём полные данные матча, все 10 игроков. Для каждой команды перебираем все 120 расстановок и выбираем ту, что лучше всего сходится с обычными позициями героев, местом по фарму в команде и линией, если матч разобран по реплею.</li>
       <li><b>Сравнение с соперником.</b> Ты против игрока на той же позиции у врагов: опыт и золото в минуту. Плюс как ваш керри фармит против вражеского, когда ты не на единичке.</li>
       <li><b>Навыки</b> — процентили к норме героя по данным OpenDota: золото, опыт, добивания, урон, убийства и помощь в минуту, смерти, урон по строениям.</li>
-      <li><b>Роль</b> = победы на героях позиции (герои разложены по позициям, на которых ты их реально играешь) + победы в последних играх на этой позиции + линия + керри + совпадение навыков с задачами позиции.</li>
-      <li><b>Новые герои.</b> Гребневая регрессия по всем твоим героям учит, какие черты героя дают тебе плюс к победам. Потом добавляем совпадение с навыками, похожесть на твоих сильных героев${a.hasMeta?" и силу героя на твоём ранге":""}. Герои, на которых ты не играл, получают оценку по тем же чертам.</li>
+      <li><b>Роль</b> = победы на героях позиции + победы в последних играх на ней + линия + керри + совпадение навыков с задачами позиции + то, что ты сам любишь в игре.</li>
+      <li><b>Новые герои.</b> Предлагаются только герои, на которых у тебя меньше 5 игр. Главный вес у твоих ответов: что тебе нравится, сложность, тип атаки. Дальше — модель по твоим играм: какие черты героя дают тебе плюс к победам, совпадение с навыками${a.hasMeta?", сила героя на твоём ранге":""}. Цель «Поднять рейтинг» даёт больше веса статистике, «Кайфовать» — твоим ответам.</li>
       <li><b>Проценты сглажены</b> к твоему среднему, чтобы случайные серии не врали.</li>
     </ol>
   </section>`;
+}
+
+/* ===== Main screen: quiz + one role + three new heroes ===== */
+let PREFS = (()=>{ try{ return {...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem("pik:prefs")||"{}")}; }catch(_){ return {...DEFAULT_PREFS}; } })();
+const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs", JSON.stringify(PREFS)); }catch(_){} };
+let STATE = null; // {d, a, isDemo}
+
+function chipRow(key, opts, multi, max){
+  return `<div class="chips-q" data-key="${key}">${opts.map(([v,t])=>{
+    const on = multi ? PREFS[key].includes(v) : PREFS[key]===v;
+    return `<button type="button" class="qc${on?" on":""}" data-v="${v}" aria-pressed="${on}">${esc(t)}</button>`; }).join("")}</div>`;
+}
+function renderQuiz(){
+  const el = document.getElementById("quiz");
+  const names = Object.entries(HERO).map(([id,h])=>[+id,h.n]).sort((a,b)=>a[1].localeCompare(b[1]));
+  el.innerHTML = `
+    <div class="q"><div class="ql">Чего хочешь?</div>${chipRow("goal",Object.entries(GOALS),false)}</div>
+    <div class="q"><div class="ql">Что тебе нравится в Доте? <span>до двух</span></div>${chipRow("likes",Object.entries(LIKES).map(([k,v])=>[k,v.t]),true,2)}</div>
+    <div class="q"><div class="ql">Роль</div>${chipRow("role",[["auto","Подскажи сам"],["1","1 · Керри"],["2","2 · Мид"],["3","3 · Оффлейн"],["4","4 · Четвёрка"],["5","5 · Пятёрка"]],false)}</div>
+    <div class="q two">
+      <div><div class="ql">Сложность героя</div>${chipRow("cx",[["any","Любая"],["easy","Попроще"],["mid","Средняя"],["hard","Посложнее"]],false)}</div>
+      <div><div class="ql">Атака</div>${chipRow("atk",[["any","Любая"],["melee","Ближний бой"],["ranged","Дальний бой"]],false)}</div>
+    </div>
+    <div class="q"><div class="ql">Кого не предлагать</div>
+      <div class="ban"><input id="banIn" list="heroList" placeholder="Начни вводить имя героя" autocomplete="off" aria-label="Герой, которого не предлагать">
+      <datalist id="heroList">${names.map(([,n])=>`<option value="${esc(n)}">`).join("")}</datalist>
+      ${PREFS.ban.map(id=>HERO[id]?`<button type="button" class="bc" data-id="${id}" title="Вернуть">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div></div>`;
+  el.querySelectorAll(".chips-q").forEach(row=>row.addEventListener("click",e=>{
+    const b = e.target.closest(".qc"); if(!b) return;
+    const key = row.dataset.key, v = b.dataset.v;
+    if(key==="likes"){ const s=PREFS.likes; if(s.includes(v)) PREFS.likes=s.filter(x=>x!==v); else PREFS.likes=[...s.slice(-1),v]; }
+    else PREFS[key]=v;
+    savePrefs(); renderQuiz(); drawResult();
+  }));
+  const inp = document.getElementById("banIn");
+  inp.addEventListener("change",()=>{ const hit = names.find(([,n])=>n.toLowerCase()===inp.value.trim().toLowerCase()); if(hit && !PREFS.ban.includes(hit[0])){ PREFS.ban=[...PREFS.ban,hit[0]]; savePrefs(); renderQuiz(); drawResult(); } });
+  el.querySelectorAll(".bc").forEach(b=>b.addEventListener("click",()=>{ PREFS.ban=PREFS.ban.filter(x=>x!==+b.dataset.id); savePrefs(); renderQuiz(); drawResult(); }));
+}
+
+function render(d, isDemo){
+  const a = analyze(d);
+  STATE = {d, a, isDemo};
+  drawResult();
+}
+const dots = n => `<span class="cx" title="Сложность">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
+
+function roleLine(ch, a){
+  const r = ch.r; const parts = [];
+  const total = a.rows.length;
+  if(ch.chosen) parts.push("Ты выбрал сам.");
+  if(r && r.n && total) parts.push(`Ты стоял тут в ${r.n} из ${total} последних игр.`);
+  else if(r && total) parts.push("В последних играх ты тут не стоял — это новое для тебя.");
+  if(r && r.pros[0] && !ch.chosen){ const t=r.pros[0]; parts.push(t[0].toUpperCase()+t.slice(1)+"."); }
+  const liked = PREFS.likes.filter(l=>((ROLE_FROM_LIKE[l]||{})[ch.pos]||0)>=3);
+  if(liked.length && !ch.chosen) parts.push(`И это подходит к тому, что ты любишь: ${liked.map(l=>LIKES[l].t.toLowerCase()).join(", ")}.`);
+  return parts.slice(0,3).join(" ");
+}
+
+function drawResult(){
+  if(!STATE) return;
+  const {d, a, isDemo} = STATE;
+  const out = document.getElementById("out");
+  if(!a.games){ out.innerHTML = `<div class="notice err">В этом профиле нет рейтинговых игр за выбранный период. Попробуй «Всё время».</div>`; return; }
+  const p = d.profile, rt = p.rank_tier;
+  const medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
+  const ch = chooseRole(a, PREFS);
+  const list = pickHeroes(a, PREFS, ch.pos);
+  const top = list.slice(0,3), more = list.slice(3,7);
+  const altRoles = ch.chosen ? [1,2,3,4,5].filter(x=>x!==ch.pos) : ch.alt;
+
+  out.innerHTML = `
+  ${isDemo?`<div class="notice demo">Пример на открытом профиле. Вставь свою ссылку сверху — получишь свой разбор.</div>`:""}
+  <div class="player">
+    <div class="avatar">${p.avatarfull?`<img src="${esc(p.avatarfull)}" alt="" onerror="this.parentElement.textContent='${esc(initials(p.personaname||"?"))}'">`:esc(initials(p.personaname||"?"))}</div>
+    <div class="who"><div class="name">${esc(p.personaname||"Игрок "+p.account_id)}</div><div class="muted" style="font-size:13px">${a.games} игр · ${pct(a.p0)}% побед · ${esc(medal)}</div></div>
+  </div>
+
+  <section class="pick">
+    <div class="pick-role">
+      <span class="eyebrow">Тебе стоит играть</span>
+      <h2><span class="pn">${ch.pos}</span> ${esc(POS[ch.pos])}</h2>
+      <p>${esc(roleLine(ch,a))}</p>
+      <div class="alt"><span class="muted">Другая роль:</span>${altRoles.map(x=>`<button type="button" class="qc sm" data-role="${x}">${x} · ${POS[x]}</button>`).join("")}${ch.chosen?`<button type="button" class="qc sm" data-role="auto">Подскажи сам</button>`:""}</div>
+    </div>
+    <div class="eyebrow" style="margin-top:6px">Попробуй этих героев</div>
+    <div class="trio">${top.map(h=>`<article class="hc">
+        <div class="hc-img">${heroImg(h,false,true)}</div>
+        <div class="hc-b"><div class="hc-n">${esc(h.name)} ${dots(h.cx)}</div>
+          <div class="hc-m">${h.ranged?"Дальний бой":"Ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}</div>
+          ${h.why.length?`<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}
+          <button type="button" class="nope" data-id="${h.id}">Не нравится</button></div>
+      </article>`).join("")||`<div class="empty">Под такие условия героев не нашлось. Убери пару ограничений.</div>`}</div>
+    ${more.length?`<div class="more"><span class="muted">Ещё варианты:</span>${more.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
+    ${PREFS.likes.length?"":`<div class="hint-q">Отметь сверху, что тебе нравится в Доте, — подбор станет точнее.</div>`}
+  </section>
+
+  <details class="deep"><summary>Подробный разбор: навыки, стиль, тренд, матчи</summary><div class="deep-in">${detailsHTML(d,a,isDemo)}</div></details>`;
+
+  out.querySelectorAll("[data-role]").forEach(b=>b.addEventListener("click",()=>{ PREFS.role=b.dataset.role; savePrefs(); renderQuiz(); drawResult(); document.querySelector(".pick").scrollIntoView({behavior:"smooth",block:"start"}); }));
+  out.querySelectorAll(".nope").forEach(b=>b.addEventListener("click",()=>{ PREFS.ban=[...PREFS.ban,+b.dataset.id]; savePrefs(); renderQuiz(); drawResult(); }));
   const pb = document.getElementById("parseBtn");
   if(pb) pb.addEventListener("click", async ()=>{
     pb.disabled=true;
@@ -1013,6 +1208,7 @@ f.addEventListener("submit", async e=>{
 });
 
 try{ const last = localStorage.getItem("pik:last"); if(last) q.value = last; }catch(_){}
+renderQuiz();
 render(DEMO,true);
 </script>
 
