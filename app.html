@@ -1172,9 +1172,13 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     const onMain = out.filter(h=>h.primary===mainRole), other = out.filter(h=>h.primary!==mainRole);
     out.splice(0, out.length, ...onMain.slice(0,3), ...other, ...onMain.slice(3));
   }
-  const res=[], later=[];
-  for(const h of out){ if(res.length>=3) break; if(res.some(r=>r.dims[0]===h.dims[0])) later.push(h); else res.push(h); }
-  while(res.length<3 && later.length) res.push(later.shift());
+  // pick three: main role first, varied in feel, then other roles only if needed
+  const res=[];
+  const pool = mainRole ? out.filter(h=>h.primary===mainRole) : out;
+  const strongEnough = h => h.score >= (pool[0]?.score ?? 0) - 25;
+  for(const h of pool){ if(res.length>=3) break; if(!strongEnough(h)) break; if(!res.some(r=>r.dims[0]===h.dims[0])) res.push(h); }
+  for(const h of pool){ if(res.length>=3) break; if(!strongEnough(h)) break; if(!res.includes(h)) res.push(h); }
+  for(const h of out){ if(res.length>=3) break; if(!res.includes(h)) res.push(h); }
   return {top:res, rest:out.filter(h=>!res.includes(h)).slice(0,5)};
 }
 
