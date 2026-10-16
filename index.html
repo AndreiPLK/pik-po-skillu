@@ -339,6 +339,8 @@ details.opts[open] summary{margin-bottom:4px}
 .yes:hover{border-color:var(--good)}
 .btns{flex-wrap:wrap;align-items:center}
 
+.stl{font-size:15px;color:var(--muted)} .stl b{color:var(--fg);font-weight:600}
+.story{margin:0;font-size:16px;line-height:1.6}
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -987,11 +989,12 @@ const DIMS = {
   S:{t:"Одинокий волк",         s:"жить своей игрой на краю карты"},
   T:{t:"Неубиваемый",           s:"не умирать, когда все вокруг бьют"},
   K:{t:"Снайпер",               s:"бить издалека, пока до тебя не дотянутся"},
-  X:{t:"Хитрец",                s:"невидимость, иллюзии, нестандартные трюки"}
+  X:{t:"Хитрец",                s:"невидимость, иллюзии, нестандартные трюки"},
+  R:{t:"Шуршун",               s:"бегать по всей карте и влиять везде, а не стоять фармить"}
 };
 const DK = Object.keys(DIMS);
 // uppercase = главное в герое, lowercase = есть немного
-const HD_RAW = {1:"LSm",2:"TBe",3:"Pb",4:"AEt",5:"Pb",6:"KL",7:"BMp",8:"Lmt",9:"AMk",10:"MLXk",11:"MKe",12:"LXs",13:"MXb",14:"AMt",15:"TKe",16:"BEa",17:"MAe",18:"LBt",19:"AEm",20:"Pe",21:"MKa",22:"KBa",23:"BMt",25:"KAe",26:"Ap",27:"Ps",28:"EAt",29:"BT",30:"BPk",31:"Pb",32:"AX",33:"BXs",34:"MSX",35:"Ks",36:"TAk",37:"BP",38:"EXb",39:"AMe",40:"Esk",41:"LBm",42:"LT",43:"Te",44:"AL",45:"SKx",46:"AMX",47:"TKE",48:"LKs",49:"TLs",50:"Px",51:"AEm",52:"SEk",53:"SXe",54:"TLe",55:"BXs",56:"AXK",57:"PT",58:"Pkx",59:"TEa",60:"AEt",61:"SXE",62:"AXe",63:"AXl",64:"Pb",65:"AM",66:"PXM",67:"LTx",68:"Bpk",69:"TEa",70:"EAt",71:"AE",72:"KBl",73:"LTs",74:"MBX",75:"Bpk",76:"KLm",77:"SEx",78:"BMXt",79:"PMx",80:"SMX",81:"TXe",82:"MXA",83:"PXt",84:"TPe",85:"TPe",86:"MXp",87:"BP",88:"AX",89:"LXS",90:"Psx",91:"PXM",92:"MXk",93:"ALX",94:"LTK",95:"LEt",96:"TBe",97:"BM",98:"TMs",99:"Te",100:"AEm",101:"AK",102:"TP",103:"BXp",104:"AEt",105:"XAs",106:"MAx",107:"MAx",108:"TB",109:"LXk",110:"BMt",111:"PMX",112:"PBx",113:"MSXl",114:"AMX",119:"AXp",120:"MBt",121:"ABp",123:"AKx",126:"MAe",128:"BKa",129:"BTe",131:"XPm",135:"TBp",136:"AEp",137:"TBE",138:"KLm",145:"MAx",155:"PBx"};
+const HD_RAW = {1:"LSm",2:"TBe",3:"Pb",4:"AEtr",5:"Pb",6:"KL",7:"BMp",8:"Lmt",9:"AMkR",10:"MLXk",11:"MKe",12:"LXs",13:"MXbR",14:"AMtR",15:"TKe",16:"BEar",17:"MAeR",18:"LBt",19:"AEmr",20:"Pe",21:"MKar",22:"KBar",23:"BMtr",25:"KAe",26:"Apr",27:"Ps",28:"EAt",29:"BT",30:"BPk",31:"Pb",32:"AXR",33:"BXs",34:"MSXR",35:"Ks",36:"TAk",37:"BP",38:"EXb",39:"AMeR",40:"Eskr",41:"LBm",42:"LT",43:"Te",44:"ALr",45:"SKx",46:"AMXr",47:"TKE",48:"LKs",49:"TLs",50:"Px",51:"AEmR",52:"SEk",53:"SXeR",54:"TLe",55:"BXs",56:"AXKR",57:"PT",58:"Pkx",59:"TEa",60:"AEt",61:"SXE",62:"AXeR",63:"AXlR",64:"Pb",65:"AMR",66:"PXM",67:"LTxr",68:"Bpk",69:"TEa",70:"EAt",71:"AER",72:"KBl",73:"LTs",74:"MBXr",75:"Bpk",76:"KLm",77:"SEx",78:"BMXt",79:"PMx",80:"SMX",81:"TXe",82:"MXAr",83:"PXt",84:"TPe",85:"TPe",86:"MXp",87:"BP",88:"AXR",89:"LXS",90:"Psx",91:"PXMR",92:"MXk",93:"ALXr",94:"LTK",95:"LEt",96:"TBe",97:"BM",98:"TMs",99:"Te",100:"AEmR",101:"AKr",102:"TP",103:"BXp",104:"AEt",105:"XAsr",106:"MAxR",107:"MAxR",108:"TB",109:"LXk",110:"BMtr",111:"PMX",112:"PBx",113:"MSXl",114:"AMXR",119:"AXpr",120:"MBtR",121:"ABpr",123:"AKxr",126:"MAeR",128:"BKar",129:"BTe",131:"XPm",135:"TBp",136:"AEpR",137:"TBE",138:"KLm",145:"MAxR",155:"PBx"};
 function heroDims(id){
   const s = HD_RAW[id]||""; const v = Object.fromEntries(DK.map(k=>[k,0]));
   for(const ch of s){ const k=ch.toUpperCase(); if(k in v) v[k] = Math.max(v[k], ch===k?1:0.5); }
@@ -1240,6 +1243,7 @@ function needs(beh, a, prefs){
     rangedN = beh.loved.filter(h=>HERO[h.id]?.m==="Ranged").length; lovedN = beh.loved.length;
   }
   if(a.skills && a.skills.surv<0.4) start += 0.1;
+  if(prefs._seeker) depth += 0.15;
   start = Math.max(0, Math.min(1, start + adj.start));
   depth = Math.max(0, Math.min(1, depth + adj.depth));
   return {start, depth, ev, ranged, rangedN, lovedN};
@@ -1260,6 +1264,44 @@ function sdBridge(id, beh){
   if(easyLike && s===1) return `Начинать так же легко, как на ${HERO[easyLike.id].n}.`;
   if(deepLike) return `Глубина как у ${HERO[deepLike.id].n}: есть что осваивать.`;
   return null;
+}
+
+/* ===== What drives you: winner, seeker, one-trick, steady ===== */
+function motivation(beh, a){
+  if(!beh) return null;
+  const all = beh.list;
+  const last = (STATE && STATE.d && STATE.d.matches) ? STATE.d.matches.slice().sort((x,y)=>y.start_time-x.start_time).slice(0,100) : [];
+  const cnt = {}; for(const m of last) cnt[m.hero_id]=(cnt[m.hero_id]||0)+1;
+  const topShare = last.length ? Math.max(...Object.values(cnt))/last.length : 0;
+  const topId = Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
+  const tried = all.filter(h=>h.g>=5).length;                // heroes you gave a real try
+  const longLove = all.filter(h=>h.g>=60).length;
+  // do your picks follow your own win rate?
+  const strongPicks = last.filter(m=>{ const h=a.heroes.find(x=>x.id===m.hero_id); return h && h.games>=10 && h.adj>a.p0+0.02; }).length / (last.length||1);
+  let type;
+  if(topShare>=0.35) type = {k:"onetrick", t:"Мастер одного героя", d:`${Math.round(topShare*100)}% последних игр — на ${HERO[topId].n}. Тебе нужен не новый главный герой, а второй — на случай, когда твоего забрали или законтрили.`};
+  else if(beh.distinct>=28 && topShare<0.2) type = {k:"seeker", t:"Ищущий", d:`За последние 100 игр — ${beh.distinct} разных героев, ${tried} героев ты пробовал всерьёз. Ты ни на ком не задерживаешься не потому, что не умеешь, а потому что становится скучно. Тебе нужен один герой на всю жизнь — такой, который не надоест.`};
+  else if(strongPicks>=0.55) type = {k:"winner", t:"Победитель", d:`Больше половины игр ты берёшь героев, на которых уже выигрываешь. Тебе важен результат — значит, нужен герой, который поднимет рейтинг быстрее всего.`};
+  else type = {k:"steady", t:"Стабильный", d:`У тебя есть свои герои, и ты к ним возвращаешься. Тебе нужен герой, который расширит пул и не сломает то, что работает.`};
+  return {...type, topShare, topId:+topId, distinct:beh.distinct, tried, longLove};
+}
+
+// One confident pick, told like a coach would tell it
+function story(h, mot, beh, nd, a){
+  if(!h) return "";
+  const loved = beh ? beh.loved : [];
+  const hd = heroDims(h.id);
+  const lovedLike = loved.filter(x=>x.id!==h.id).map(x=>({x,c:dcos(dvec(heroDims(x.id)),dvec(hd))})).sort((p,q)=>q.c-p.c)[0];
+  const pain = loved.find(x=>heroStart(x.id)===0 && x.wr<a.p0-0.05);
+  const p = [];
+  p.push(`Я думаю, тебе нужен ${h.name}.`);
+  if(mot && mot.k==="seeker") p.push(h.depth>=1 ? `Он не надоест: на нём можно играть годами и каждый раз находить что-то новое.` : `Он простой на входе, но в нём есть за что зацепиться надолго.`);
+  if(mot && mot.k==="winner") p.push(`Он сейчас один из самых надёжных способов выигрывать на твоей позиции.`);
+  if(mot && mot.k==="onetrick") p.push(`Он закроет те игры, где ${HERO[mot.topId].n} не подходит.`);
+  if(lovedLike && lovedLike.c>=0.5) p.push(`В нём то же, за что ты любишь ${HERO[lovedLike.x.id].n}: ${DK.filter(k=>hd[k]>=0.5 && heroDims(lovedLike.x.id)[k]>=0.5).slice(0,2).map(k=>DIMS[k].s).join(", ")}.`);
+  if(pain && h.start>=0.5) p.push(`И в отличие от ${HERO[pain.id].n}, начинать на нём не больно.`);
+  p.push(`Сыграй на нём ${mot && mot.k==="seeker" ? "30 игр подряд, не переключаясь" : "15 игр подряд"} — и про тебя начнут говорить: «а, это тот самый ${h.name}».`);
+  return p.join(" ");
 }
 
 /* ===== Rendering ===== */
@@ -1468,7 +1510,8 @@ function drawResult(){
   const p=d.profile, rt=p.rank_tier, medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
   const roles = roleShares(d.matches, a, d.bench);
   const prof = buildProfile(beh, a.heroes, PREFS.quiz, {skills:a.skills, likeIds:PREFS.like, banIds:PREFS.ban});
-  const nd = needs(beh, a, PREFS);
+  const mot = motivation(beh, a);
+  const nd = needs(beh, a, {...PREFS, _seeker: mot && mot.k==="seeker"});
   const {top, rest} = pickMagic(a, beh, prof, PREFS, roles, nd);
   const curRoles = PREFS.roles.length ? PREFS.roles.map(Number) : (roles?roles.main:[]);
   const ins = insights(beh, a);
@@ -1488,10 +1531,11 @@ function drawResult(){
   </div>
 
   <section class="style">
-    <span class="eyebrow">Твой стиль</span>
-    <h2>Ты — ${esc(DIMS[k1].t.toLowerCase())}</h2>
-    <p>Тебе в кайф ${esc(DIMS[k1].s)}. А ещё — ${esc(DIMS[k2].s)}.</p>
-        <div class="needs">
+    <span class="eyebrow">Какой ты игрок</span>
+    <h2>${mot?`Ты — ${esc(mot.t.toLowerCase())}`:`Ты — ${esc(DIMS[k1].t.toLowerCase())}`}</h2>
+    ${mot?`<p>${esc(mot.d)}</p>`:""}
+    <p class="stl">Твой стиль: <b>${esc(DIMS[k1].t)}</b> и <b>${esc(DIMS[k2].t.toLowerCase())}</b> — тебе в кайф ${esc(DIMS[k1].s)}, а ещё ${esc(DIMS[k2].s)}.</p>
+    <div class="needs">
       <div class="nd"><div class="nl"><span>Старт</span><b>${nd.start>=0.6?"нужен лёгкий":nd.start>=0.35?"обычный":"можно и тяжёлый"}</b></div><i><b style="width:${Math.round(nd.start*100)}%"></b></i><div class="nh">насколько легко должно быть в начале игры</div></div>
       ${nd.ranged!=null?`<div class="nd"><div class="nl"><span>Атака</span><b>${nd.ranged>=0.65?"дальний бой":nd.ranged<=0.35?"ближний бой":"любая"}</b></div><i><b style="width:${Math.round(nd.ranged*100)}%"></b></i><div class="nh">${nd.rangedN} из ${nd.lovedN} любимых героев — дальнего боя</div></div>`:""}
       <div class="nd"><div class="nl"><span>Глубина</span><b>${nd.depth>=0.65?"нужен сложный":nd.depth>=0.35?"средняя":"попроще"}</b></div><i><b style="width:${Math.round(nd.depth*100)}%"></b></i><div class="nh">насколько интересно и сложно дальше</div></div>
@@ -1502,24 +1546,24 @@ function drawResult(){
   </section>
 
   ${hero?`<section class="reveal">
-    <span class="eyebrow">Твой герой</span>
+    <span class="eyebrow">Мой выбор для тебя</span>
     <article class="big">
       <div class="big-img">${heroImg(hero,false,true)}</div>
       <div class="big-b">
         <h2>${esc(hero.name)}</h2>
         <div class="tags">${dimTags(hero.dims)}</div>${sdTags(hero)}
         <div class="hc-m"><span class="rc">${esc(POS[hero.rolePos])}</span> ${meta(hero)}</div>
-        ${why(hero)}
-        <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Интересно</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
+        <p class="story">${esc(story(hero, mot, beh, nd, a))}</p>
+        <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Беру</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
     </article>
-    ${top.length>1?`<div class="eyebrow" style="margin-top:8px">И ещё двое</div>
+    ${top.length>1?`<div class="eyebrow" style="margin-top:8px">Если не зайдёт — запасные</div>
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
       <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">${esc(POS[h.rolePos])}</span> ${meta(h)}</div>${why(h)}
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
-    <div class="posline">«Интересно» — подберу ещё похожих. «Не моё» — уберу и учту, что такое тебе не заходит.</div>
+    <div class="posline">«Беру» или «Интересно» — подберу ещё похожих. «Не моё» — уберу и учту почему.</div>
   </section>`:`<div class="notice">Под такие ограничения героев не нашлось. Убери пару ограничений.</div>`}
 
   <details class="deep"><summary>Подробный разбор: навыки, стиль, тренд, матчи</summary><div class="deep-in">${detailsHTML(d,a,isDemo)}</div></details>`;
