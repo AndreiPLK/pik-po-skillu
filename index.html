@@ -283,6 +283,39 @@ details.deep{border-top:1px solid var(--line);padding-top:14px}
 details.deep summary{cursor:pointer;font-weight:600;font-size:15px;padding:6px 0;color:var(--gold)}
 .deep-in{display:flex;flex-direction:column;gap:30px;padding-top:18px}
 
+
+.qhead{display:flex;flex-direction:column;gap:2px}
+.qhead b{font-size:15px}
+.qhead span{font-size:13px;color:var(--muted)}
+details.opts summary{cursor:pointer;color:var(--muted);font-size:13.5px}
+details.opts[open]{display:flex;flex-direction:column;gap:12px}
+details.opts[open] summary{margin-bottom:4px}
+.style{display:flex;flex-direction:column;gap:10px}
+.style h2{font-size:clamp(32px,6vw,46px)}
+.style p{margin:0;font-size:17px;max-width:60ch}
+.dimbars{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 16px;max-width:720px}
+.db{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.db i{display:block;height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden}
+.db b{display:block;height:100%;background:var(--gold)}
+.ins{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;max-width:760px}
+.ins ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+.reveal{display:flex;flex-direction:column;gap:12px}
+.big{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);background:var(--panel);border:1px solid var(--gold);border-radius:14px;overflow:hidden;min-width:0}
+@media (max-width:720px){.big{grid-template-columns:minmax(0,1fr)}}
+.big-img .himg{width:100%;height:100%;min-height:200px;aspect-ratio:16/9;border-radius:0;font-size:28px;max-width:100%}
+.big-b{padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.big-b h2{font-size:clamp(30px,5vw,42px);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.big-b ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.big-b li{padding-left:16px;position:relative}
+.big-b li::before{content:"";position:absolute;left:0;top:.6em;width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.dt{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--gold)}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.duo{grid-template-columns:minmax(0,1fr)}}
+.btns{display:flex;gap:8px}
+.posline{font-size:14px;color:var(--muted)}
+.posline b{color:var(--fg)}
+
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -291,7 +324,7 @@ details.deep summary{cursor:pointer;font-weight:600;font-size:15px;padding:6px 0
   <header class="head">
     <span class="eyebrow">Dota 2 · разбор по навыкам</span>
     <h1>Пик по скиллу</h1>
-    <p>Вставь ссылку на профиль и отметь, что тебе нравится в игре. Получишь роль и трёх новых героев под тебя — с короткой причиной для каждого.</p>
+    <p>Вставь ссылку на профиль и ответь на четыре вопроса. Мы разберём все твои игры, поймём, что тебе на самом деле в кайф, и найдём героя, которого ты ещё не пробовал.</p>
     <form class="search" id="f" novalidate>
       <input id="q" name="q" autocomplete="off" placeholder="Код друга из Доты, SteamID64 или ссылка Dotabuff / OpenDota / Stratz / Steam" aria-label="ID или ссылка на профиль">
       <select id="period" aria-label="Период">
@@ -301,9 +334,9 @@ details.deep summary{cursor:pointer;font-weight:600;font-size:15px;padding:6px 0
         <option value="60">Последние 2 месяца</option>
       </select>
       <select id="depth" aria-label="Сколько матчей разбирать целиком">
-        <option value="20">20 матчей целиком</option>
-        <option value="35" selected>35 матчей целиком</option>
-        <option value="50">50 матчей (дольше)</option>
+        <option value="10">Быстро</option>
+        <option value="20" selected>Обычно</option>
+        <option value="40">Глубже (дольше)</option>
       </select>
       <button id="go" type="submit">Разобрать</button>
     </form>
@@ -646,12 +679,12 @@ async function pool(items, n, fn){ const q=items.slice(); const ws=Array.from({l
 
 async function loadPlayer(id, days, depth, progress){
   const q = days ? `date=${days}&` : "";
-  progress("Загружаю профиль и матчи…");
-  const proj = ["match_id","hero_id","start_time","duration","player_slot","radiant_win","kills","deaths","assists","gold_per_min","xp_per_min","last_hits","hero_damage","tower_damage"].map(p=>"project="+p).join("&");
+  progress("Загружаю все твои игры…");
+  const proj = ["match_id","hero_id","start_time","duration","player_slot","radiant_win","kills","deaths","assists","gold_per_min","xp_per_min","last_hits","hero_damage","tower_damage","party_size","lane_role"].map(p=>"project="+p).join("&");
   const [profile, wl, heroes, counts, totals, recent, matches] = await Promise.all([
     getJSON(`/players/${id}`), getJSON(`/players/${id}/wl?${q}`), getJSON(`/players/${id}/heroes?${q}`),
     getJSON(`/players/${id}/counts?${q}`), getJSON(`/players/${id}/totals?${q}`), getJSON(`/players/${id}/recentMatches`),
-    getJSON(`/players/${id}/matches?${q}limit=100&${proj}`).catch(()=>[])
+    getJSON(`/players/${id}/matches?${q}${proj}`).catch(()=>[])
   ]);
   if(!profile.profile) return {missing:true};
   if(!heroStatsCache){ progress("Загружаю силу героев на рангах…"); try{ heroStatsCache = await getJSON(`/heroStats`); }catch(e){ if(e.kind==="network") throw e; heroStatsCache=null; } }
@@ -919,6 +952,193 @@ function pickHeroes(a, prefs, pos){
   return out;
 }
 
+/* ===== Psychology: what you enjoy, read from how you play and from indirect questions ===== */
+// 10 hidden dimensions of how a hero feels to play
+const DIMS = {
+  L:{t:"Монстр поздней игры",  s:"стать непобедимым к концу игры"},
+  E:{t:"Агрессор с первых минут", s:"давить с самого начала"},
+  M:{t:"Механик",              s:"переигрывать руками и комбо"},
+  A:{t:"Охотник",               s:"выследить и убить одного"},
+  B:{t:"Человек больших моментов", s:"одна кнопка — и драка выиграна"},
+  P:{t:"Ангел-хранитель",       s:"спасать своих"},
+  S:{t:"Одинокий волк",         s:"жить своей игрой на краю карты"},
+  T:{t:"Неубиваемый",           s:"не умирать, когда все вокруг бьют"},
+  K:{t:"Снайпер",               s:"бить издалека, пока до тебя не дотянутся"},
+  X:{t:"Хитрец",                s:"невидимость, иллюзии, нестандартные трюки"}
+};
+const DK = Object.keys(DIMS);
+// uppercase = главное в герое, lowercase = есть немного
+const HD_RAW = {1:"LSm",2:"TBe",3:"Pb",4:"AEt",5:"Pb",6:"KL",7:"BMp",8:"Lmt",9:"AMk",10:"MLXk",11:"MKe",12:"LXs",13:"MXb",14:"AMt",15:"TKe",16:"BEa",17:"MAe",18:"LBt",19:"AEm",20:"Pe",21:"MKa",22:"KBa",23:"BMt",25:"KAe",26:"Ap",27:"Ps",28:"EAt",29:"BT",30:"BPk",31:"Pb",32:"AX",33:"BXs",34:"MSX",35:"Ks",36:"TAk",37:"BP",38:"EXb",39:"AMe",40:"Esk",41:"LBm",42:"LT",43:"Te",44:"AL",45:"SKx",46:"AMX",47:"TKE",48:"LKs",49:"TLs",50:"Px",51:"AEm",52:"SEk",53:"SXe",54:"TLe",55:"BXs",56:"AXK",57:"PT",58:"Pkx",59:"TEa",60:"AEt",61:"SXE",62:"AXe",63:"AXl",64:"Pb",65:"AM",66:"PXM",67:"LTx",68:"Bpk",69:"TEa",70:"EAt",71:"AE",72:"KBl",73:"LTs",74:"MBX",75:"Bpk",76:"KLm",77:"SEx",78:"BMXt",79:"PMx",80:"SMX",81:"TXe",82:"MXA",83:"PXt",84:"TPe",85:"TPe",86:"MXp",87:"BP",88:"AX",89:"LXS",90:"Psx",91:"PXM",92:"MXk",93:"ALX",94:"LTK",95:"LEt",96:"TBe",97:"BM",98:"TMs",99:"Te",100:"AEm",101:"AK",102:"TP",103:"BXp",104:"AEt",105:"XAs",106:"MAx",107:"MAx",108:"TB",109:"LXk",110:"BMt",111:"PMX",112:"PBx",113:"MSXl",114:"AMX",119:"AXp",120:"MBt",121:"ABp",123:"AKx",126:"MAe",128:"BKa",129:"BTe",131:"XPm",135:"TBp",136:"AEp",137:"TBE",138:"KLm",145:"MAx",155:"PBx"};
+function heroDims(id){
+  const s = HD_RAW[id]||""; const v = Object.fromEntries(DK.map(k=>[k,0]));
+  for(const ch of s){ const k=ch.toUpperCase(); if(k in v) v[k] = Math.max(v[k], ch===k?1:0.5); }
+  return v;
+}
+const dvec = o => DK.map(k=>o[k]||0);
+const dcos = (a,b)=>{ let s=0,x=0,y=0; for(let i=0;i<a.length;i++){ s+=a[i]*b[i]; x+=a[i]*a[i]; y+=b[i]*b[i]; } return x&&y ? s/Math.sqrt(x*y) : 0; };
+
+// Indirect questions: each answer quietly nudges hidden dimensions
+const QUIZ = [
+  {k:"scene", q:"Какой момент из Доты тебе приятнее всего вспомнить?", a:[
+    ["s1","Вышел из тумана — и враг умер, не успев нажать ни одной кнопки",{A:1,X:.6}],
+    ["s2","40-я минута, ты один против пятерых — и они бегут",{L:1,T:.4}],
+    ["s3","Одна ульта — и вся вражеская команда лежит",{B:1}],
+    ["s4","Вытащил друга с одной полоской здоровья",{P:1}],
+    ["s5","Пока все дрались, ты снёс им трон",{S:1,X:.4}],
+    ["s6","Пять кнопок за секунду — и никто не понял, что произошло",{M:1}],
+    ["s7","Тебя били всей командой, а ты стоял и смеялся",{T:1}],
+    ["s8","Уже на 10-й минуте их мид боится выйти из базы",{E:1,A:.4}]]},
+  {k:"hate", q:"Что бесит в игре сильнее всего?", a:[
+    ["h1","Умер, ничего не успев сделать",{T:.8,K:.5}],
+    ["h2","Двадцать минут фармишь, а ничего не происходит",{E:.8,A:.5}],
+    ["h3","От тебя ничего не зависит, всё решают другие",{L:.7,B:.5}],
+    ["h4","Скучно: нечего нажимать",{M:.9,X:.4}],
+    ["h5","Тебя никто не замечает",{B:.6,A:.5}],
+    ["h6","Союзники умирают у тебя на глазах",{P:.9}]]},
+  {k:"other", q:"Кем ты бываешь в других играх?", a:[
+    ["o1","Снайпер в шутерах",{K:1}],
+    ["o2","Первым залетаю в толпу",{T:.6,E:.6,B:.3}],
+    ["o3","Медик, лечу своих",{P:1}],
+    ["o4","Стелс, убийца из тени",{A:.8,X:.8}],
+    ["o5","Стратег: строю и прокачиваюсь к концу",{L:.8,S:.4}],
+    ["o6","Файтинги, комбо, реакция",{M:1}],
+    ["o7","Нахожу баги и странные билды",{X:1}]]},
+  {k:"praise", q:"Что ты хочешь услышать от команды после игры?", a:[
+    ["p1","«Он нас затащил»",{L:1}],
+    ["p2","«Его невозможно было убить»",{T:1}],
+    ["p3","«Он был везде»",{E:.7,A:.6}],
+    ["p4","«Вот это ульта!»",{B:1}],
+    ["p5","«Как он это сделал?!»",{M:.8,X:.7}],
+    ["p6","«Без него мы бы все умерли»",{P:1}],
+    ["p7","«Он один снёс полкарты»",{S:1}]]}
+];
+
+// What your own match history says you enjoy (not just where you win)
+function behaviour(all, p0){
+  const ms = (all||[]).filter(m=>m.hero_id).slice().sort((a,b)=>a.start_time-b.start_time);
+  if(ms.length<60) return null;
+  const won = m => (m.player_slot<128)===m.radiant_win;
+  const lastT = ms[ms.length-1].start_time, DAY=86400;
+  const H = {};
+  ms.forEach((m,i)=>{
+    const h = H[m.hero_id] ||= {id:m.hero_id,g:0,w:0,first:m.start_time,last:0,loss:0,ret:0,streak:0,maxStreak:0,recent:0};
+    h.g++; if(won(m)) h.w++; h.last=m.start_time;
+    if(lastT-m.start_time<90*DAY) h.recent++;
+    if(!won(m)){ h.loss++; for(let j=i+1;j<Math.min(ms.length,i+4);j++) if(ms[j].hero_id===m.hero_id){ h.ret++; break; } }
+  });
+  let prev=null, run=0;
+  for(const m of ms){ run = m.hero_id===prev ? run+1 : 1; prev=m.hero_id; H[m.hero_id].maxStreak=Math.max(H[m.hero_id].maxStreak,run); }
+  const list = Object.values(H).map(h=>{
+    h.wr=h.w/h.g; h.retRate = h.loss>=3 ? h.ret/h.loss : null; h.daysAgo=Math.round((lastT-h.last)/DAY);
+    h.enjoy = Math.log(1+h.g) + (h.retRate!=null?h.retRate*1.5:0) + Math.min(1,h.recent/10) + (h.maxStreak>=3?.5:0);
+    h.abandoned = h.g>=8 && h.daysAgo>120 && h.wr>=p0+0.05;          // was good, stopped anyway
+    h.quit = h.g>=1 && h.g<=3 && h.daysAgo>45;                        // tried and never came back
+    return h;
+  });
+  const loved = list.filter(h=>!h.abandoned && h.g>=5).sort((a,b)=>b.enjoy-a.enjoy).slice(0,10);
+  const abandoned = list.filter(h=>h.abandoned).sort((a,b)=>b.wr-a.wr);
+  const quit = list.filter(h=>h.quit);
+  // habits
+  const last100 = ms.slice(-100), distinct = new Set(last100.map(m=>m.hero_id)).size;
+  let after2=0, after2w=0; for(let i=2;i<ms.length;i++) if(!won(ms[i-1])&&!won(ms[i-2])){ after2++; if(won(ms[i])) after2w++; }
+  const solo = ms.filter(m=>m.party_size===1), party = ms.filter(m=>m.party_size>1);
+  const wrOf = a => a.length ? a.filter(won).length/a.length : null;
+  return {n:ms.length, list, loved, abandoned, quit, distinct, tilt: after2>=20 ? {n:after2, wr:after2w/after2} : null,
+    solo:{n:solo.length, wr:wrOf(solo)}, party:{n:party.length, wr:wrOf(party)}};
+}
+
+function buildProfile(beh, heroes, quiz){
+  const p = Object.fromEntries(DK.map(k=>[k,0]));
+  const src = [];
+  if(beh){
+    const tot = beh.loved.reduce((s,h)=>s+h.enjoy,0)||1;
+    for(const h of beh.loved){ const d=heroDims(h.id); for(const k of DK) p[k]+= d[k]*h.enjoy/tot; }
+    for(const h of beh.abandoned.slice(0,3)){ const d=heroDims(h.id); for(const k of DK) p[k]-= d[k]*0.25; }
+    src.push("history");
+  } else if(heroes && heroes.length){
+    const top = heroes.slice().sort((a,b)=>b.games-a.games).slice(0,10), tot = top.reduce((s,h)=>s+Math.log(1+h.games),0)||1;
+    for(const h of top){ const d=heroDims(h.id); for(const k of DK) p[k]+= d[k]*Math.log(1+h.games)/tot; }
+    src.push("heroes");
+  }
+  const picked = [];
+  for(const q of QUIZ) for(const [id,,w] of q.a) if((quiz[q.k]||[]).includes(id)) picked.push(w);
+  if(picked.length){
+    const qp = Object.fromEntries(DK.map(k=>[k,0]));
+    for(const w of picked) for(const k in w) qp[k]+=w[k]/picked.length;
+    const max = Math.max(...Object.values(p).map(Math.abs),0.01), qmax = Math.max(...Object.values(qp),0.01);
+    for(const k of DK) p[k] = 0.45*(p[k]/max) + 0.55*(qp[k]/qmax);   // answers weigh a bit more than history
+    src.push("quiz");
+  }
+  for(const k of DK) p[k]=Math.max(0,p[k]);
+  const order = DK.slice().sort((a,b)=>p[b]-p[a]);
+  return {v:p, order, src};
+}
+
+const DEF_PREFS = {quiz:{scene:[],hate:[],other:[],praise:[]}, goal:[], roles:[], cx:[], atk:[], ban:[]};
+const quizText = id => { for(const q of QUIZ) for(const a of q.a) if(a[0]===id) return a[1]; return ""; };
+
+function pickMagic(a, beh, prof, prefs){
+  const played = new Map(a.heroes.map(h=>[h.id,h]));
+  const ban = new Set(prefs.ban.map(Number));
+  const skip = new Set([...(beh?.abandoned||[]).map(h=>h.id), ...(beh?.quit||[]).map(h=>h.id)]);
+  const beta = fitPreference(a.heroes, a.p0);
+  const pv = dvec(prof.v);
+  const wStat = prefs.goal.includes("rating") ? 1.2 : prefs.goal.includes("fun") ? 0.4 : 0.7;
+  const loved = (beh?.loved || a.heroes.slice().sort((x,y)=>y.games-x.games).slice(0,8).map(h=>({id:h.id,g:h.games,wr:h.wr})));
+  const pickedQuiz = Object.values(prefs.quiz).flat();
+  const out = [];
+  for(const id of Object.keys(HERO).map(Number)){
+    if(ban.has(id) || skip.has(id)) continue;
+    const g = played.get(id)?.games||0; if(g>=5) continue;
+    const tp = TP[id]||""; const ps = tp.slice(1);
+    if(prefs.roles.length && !prefs.roles.some(r=>ps.includes(r))) continue;
+    const cx = complexity(id);
+    if(prefs.cx.length && !prefs.cx.includes(String(cx))) continue;
+    const ranged = HERO[id].m==="Ranged";
+    if(prefs.atk.length===1 && (prefs.atk[0]==="ranged")!==ranged) continue;
+    const hd = heroDims(id), hv = dvec(hd);
+    const sim = dcos(hv, pv);
+    const v = heroVec(id); const pred = beta && v ? v.reduce((s,x,i)=>s+x*beta[i],0) : 0;
+    let fit = 0; if(a.skills){ const dm=heroDemand(id); for(const k in dm) fit += dm[k]*(a.skills[k]-0.5); }
+    const m = a.meta[id] ?? null;
+    const score = sim*70 + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    // reasons
+    const why = [];
+    let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); if(!bridge||c>bridge.c) bridge={L,c}; }
+    if(bridge && bridge.c>=0.5){
+      const ld = heroDims(bridge.L.id);
+      const shared = DK.filter(k=>hd[k]>=0.5 && ld[k]>=0.5 && prof.v[k]>0).sort((x,y)=>prof.v[y]-prof.v[x]).slice(0,2);
+      if(shared.length) why.push(`То же, за что ты любишь ${HERO[bridge.L.id].n}: ${shared.map(k=>DIMS[k].s).join(", ")}.`);
+    }
+    const top = DK.filter(k=>hd[k]===1).sort((x,y)=>prof.v[y]-prof.v[x])[0];
+    const qa = pickedQuiz.find(qid=>{ for(const q of QUIZ) for(const [aid,,w] of q.a) if(aid===qid && (w[top]||0)>=0.8) return true; return false; });
+    if(qa) why.push(`Ты выбрал «${quizText(qa)}» — это прямо про него.`);
+    const novel = DK.filter(k=>hd[k]===1 && prof.v[k]<0.25)[0];
+    if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
+    if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps});
+  }
+  out.sort((x,y)=>y.score-x.score);
+  // keep the three picks different from each other
+  const res=[], later=[];
+  for(const h of out){ if(res.length>=3) break; if(res.some(r=>r.dims[0]===h.dims[0])) later.push(h); else res.push(h); }
+  while(res.length<3 && later.length) res.push(later.shift());
+  return {top:res, rest:out.filter(h=>!res.includes(h)).slice(0,5)};
+}
+
+function insights(beh, a){
+  const out = [];
+  if(!beh) return out;
+  const L = beh.loved[0];
+  if(L) out.push(`${HERO[L.id].n}: ${L.g} игр${L.retRate!=null?`, и после поражения ты возвращался к нему в ${Math.round(L.retRate*100)}% случаев. Его ты по-настоящему любишь`:""}.`);
+  const Ab = beh.abandoned[0];
+  if(Ab) out.push(`${HERO[Ab.id].n}: ${Math.round(Ab.wr*100)}% побед за ${Ab.g} игр — и ты его бросил. Значит, дело не в победах, а в ощущении от игры. Это учтено.`);
+  if(beh.distinct>=30) out.push(`За последние 100 игр ты брал ${beh.distinct} разных героев. Ты ищешь своего — и это нормально.`);
+  else if(beh.distinct<=12) out.push(`За последние 100 игр всего ${beh.distinct} разных героев: ты держишься за своих.`);
+  if(beh.tilt && beh.tilt.wr < a.p0-0.04) out.push(`После двух поражений подряд у тебя ${Math.round(beh.tilt.wr*100)}% побед. В такие моменты бери своего надёжного героя, а новых пробуй на свежую голову.`);
+  return out.slice(0,3);
+}
+
 /* ===== Rendering ===== */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = n => String(n).split(/[\s'-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -1079,110 +1299,110 @@ function detailsHTML(d, a, isDemo){
   </section>`;
 }
 
-/* ===== Main screen: quiz + one role + three new heroes ===== */
-let PREFS = (()=>{ try{ return {...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem("pik:prefs")||"{}")}; }catch(_){ return {...DEFAULT_PREFS}; } })();
-const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs", JSON.stringify(PREFS)); }catch(_){} };
-let STATE = null; // {d, a, isDemo}
+/* ===== Main screen: indirect quiz → your style → your hero ===== */
+let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs2")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
+const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs2", JSON.stringify(PREFS)); }catch(_){} };
+let STATE = null;
 
-function chipRow(key, opts, multi, max){
-  return `<div class="chips-q" data-key="${key}">${opts.map(([v,t])=>{
-    const on = multi ? PREFS[key].includes(v) : PREFS[key]===v;
-    return `<button type="button" class="qc${on?" on":""}" data-v="${v}" aria-pressed="${on}">${esc(t)}</button>`; }).join("")}</div>`;
+function toggle(arr, v){ return arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v]; }
+function chips(group, key, opts){
+  const cur = group==="quiz" ? PREFS.quiz[key] : PREFS[key];
+  return `<div class="chips-q" data-group="${group}" data-key="${key}">${opts.map(([v,t])=>`<button type="button" class="qc${cur.includes(v)?" on":""}" data-v="${v}" aria-pressed="${cur.includes(v)}">${esc(t)}</button>`).join("")}</div>`;
 }
 function renderQuiz(){
   const el = document.getElementById("quiz");
   const names = Object.entries(HERO).map(([id,h])=>[+id,h.n]).sort((a,b)=>a[1].localeCompare(b[1]));
+  const answered = Object.values(PREFS.quiz).flat().length;
   el.innerHTML = `
-    <div class="q"><div class="ql">Чего хочешь?</div>${chipRow("goal",Object.entries(GOALS),false)}</div>
-    <div class="q"><div class="ql">Что тебе нравится в Доте? <span>до двух</span></div>${chipRow("likes",Object.entries(LIKES).map(([k,v])=>[k,v.t]),true,2)}</div>
-    <div class="q"><div class="ql">Роль</div>${chipRow("role",[["auto","Подскажи сам"],["1","1 · Керри"],["2","2 · Мид"],["3","3 · Оффлейн"],["4","4 · Четвёрка"],["5","5 · Пятёрка"]],false)}</div>
-    <div class="q two">
-      <div><div class="ql">Сложность героя</div>${chipRow("cx",[["any","Любая"],["easy","Попроще"],["mid","Средняя"],["hard","Посложнее"]],false)}</div>
-      <div><div class="ql">Атака</div>${chipRow("atk",[["any","Любая"],["melee","Ближний бой"],["ranged","Дальний бой"]],false)}</div>
-    </div>
-    <div class="q"><div class="ql">Кого не предлагать</div>
-      <div class="ban"><input id="banIn" list="heroList" placeholder="Начни вводить имя героя" autocomplete="off" aria-label="Герой, которого не предлагать">
-      <datalist id="heroList">${names.map(([,n])=>`<option value="${esc(n)}">`).join("")}</datalist>
-      ${PREFS.ban.map(id=>HERO[id]?`<button type="button" class="bc" data-id="${id}" title="Вернуть">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div></div>`;
+    <div class="qhead"><b>Четыре вопроса — без слова «герой»</b><span>Отмечай сколько хочешь вариантов. Ответы меняют результат сразу.</span></div>
+    ${QUIZ.map(q=>`<div class="q"><div class="ql">${esc(q.q)}</div>${chips("quiz",q.k,q.a.map(([id,t])=>[id,t]))}</div>`).join("")}
+    <details class="opts"${PREFS.goal.length||PREFS.roles.length||PREFS.cx.length||PREFS.atk.length||PREFS.ban.length?" open":""}><summary>Ограничения, если хочешь</summary>
+      <div class="q"><div class="ql">Цель</div>${chips("p","goal",[["rating","Поднять рейтинг"],["fun","Кайфовать"],["learn","Освоить новое"]])}</div>
+      <div class="q"><div class="ql">Роли</div>${chips("p","roles",[["1","1 · Керри"],["2","2 · Мид"],["3","3 · Оффлейн"],["4","4 · Четвёрка"],["5","5 · Пятёрка"]])}</div>
+      <div class="q two"><div><div class="ql">Сложность</div>${chips("p","cx",[["1","Простой"],["2","Средний"],["3","Сложный"]])}</div>
+        <div><div class="ql">Атака</div>${chips("p","atk",[["melee","Ближний бой"],["ranged","Дальний бой"]])}</div></div>
+      <div class="q"><div class="ql">Кого не предлагать</div><div class="ban"><input id="banIn" list="heroList" placeholder="Начни вводить имя героя" autocomplete="off" aria-label="Герой, которого не предлагать"><datalist id="heroList">${names.map(([,n])=>`<option value="${esc(n)}">`).join("")}</datalist>
+        ${PREFS.ban.map(id=>HERO[id]?`<button type="button" class="bc" data-id="${id}" title="Вернуть">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div></div>
+    </details>`;
   el.querySelectorAll(".chips-q").forEach(row=>row.addEventListener("click",e=>{
-    const b = e.target.closest(".qc"); if(!b) return;
-    const key = row.dataset.key, v = b.dataset.v;
-    if(key==="likes"){ const s=PREFS.likes; if(s.includes(v)) PREFS.likes=s.filter(x=>x!==v); else PREFS.likes=[...s.slice(-1),v]; }
-    else PREFS[key]=v;
+    const b=e.target.closest(".qc"); if(!b) return;
+    const {group,key}=row.dataset;
+    if(group==="quiz") PREFS.quiz[key]=toggle(PREFS.quiz[key],b.dataset.v); else PREFS[key]=toggle(PREFS[key],b.dataset.v);
     savePrefs(); renderQuiz(); drawResult();
   }));
-  const inp = document.getElementById("banIn");
-  inp.addEventListener("change",()=>{ const hit = names.find(([,n])=>n.toLowerCase()===inp.value.trim().toLowerCase()); if(hit && !PREFS.ban.includes(hit[0])){ PREFS.ban=[...PREFS.ban,hit[0]]; savePrefs(); renderQuiz(); drawResult(); } });
+  const inp=document.getElementById("banIn");
+  inp.addEventListener("change",()=>{ const hit=names.find(([,n])=>n.toLowerCase()===inp.value.trim().toLowerCase()); if(hit&&!PREFS.ban.includes(hit[0])){ PREFS.ban=[...PREFS.ban,hit[0]]; savePrefs(); renderQuiz(); drawResult(); } });
   el.querySelectorAll(".bc").forEach(b=>b.addEventListener("click",()=>{ PREFS.ban=PREFS.ban.filter(x=>x!==+b.dataset.id); savePrefs(); renderQuiz(); drawResult(); }));
 }
 
-function render(d, isDemo){
-  const a = analyze(d);
-  STATE = {d, a, isDemo};
-  drawResult();
-}
-const dots = n => `<span class="cx" title="Сложность">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
-
-function roleLine(ch, a){
-  const r = ch.r; const parts = [];
-  const total = a.rows.length;
-  if(ch.chosen) parts.push("Ты выбрал сам.");
-  if(r && r.n && total) parts.push(`Ты стоял тут в ${r.n} из ${total} последних игр.`);
-  else if(r && total) parts.push("В последних играх ты тут не стоял — это новое для тебя.");
-  if(r && r.pros[0] && !ch.chosen){ const t=r.pros[0]; parts.push(t[0].toUpperCase()+t.slice(1)+"."); }
-  const liked = PREFS.likes.filter(l=>((ROLE_FROM_LIKE[l]||{})[ch.pos]||0)>=3);
-  if(liked.length && !ch.chosen) parts.push(`И это подходит к тому, что ты любишь: ${liked.map(l=>LIKES[l].t.toLowerCase()).join(", ")}.`);
-  return parts.slice(0,3).join(" ");
-}
+function render(d, isDemo){ const a=analyze(d); const beh=behaviour(d.matches, a.p0); STATE={d,a,beh,isDemo}; drawResult(); }
+const dotsCx = n => `<span class="cx" title="Сложность">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
+const dimTags = ks => ks.slice(0,3).map(k=>`<span class="dt">${esc(DIMS[k].t)}</span>`).join("");
 
 function drawResult(){
   if(!STATE) return;
-  const {d, a, isDemo} = STATE;
+  const {d,a,beh,isDemo} = STATE;
   const out = document.getElementById("out");
-  if(!a.games){ out.innerHTML = `<div class="notice err">В этом профиле нет рейтинговых игр за выбранный период. Попробуй «Всё время».</div>`; return; }
-  const p = d.profile, rt = p.rank_tier;
-  const medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
-  const ch = chooseRole(a, PREFS);
-  const list = pickHeroes(a, PREFS, ch.pos);
-  const top = list.slice(0,3), more = list.slice(3,7);
-  const altRoles = ch.chosen ? [1,2,3,4,5].filter(x=>x!==ch.pos) : ch.alt;
+  if(!a.games){ out.innerHTML=`<div class="notice err">В этом профиле нет рейтинговых игр за выбранный период. Попробуй «Всё время».</div>`; return; }
+  const p=d.profile, rt=p.rank_tier, medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
+  const prof = buildProfile(beh, a.heroes, PREFS.quiz);
+  const {top, rest} = pickMagic(a, beh, prof, PREFS);
+  const ins = insights(beh, a);
+  const k1=prof.order[0], k2=prof.order[1];
+  const answered = Object.values(PREFS.quiz).flat().length;
+  const maxV = Math.max(...Object.values(prof.v),0.01);
+  const hero = top[0];
+  const posCount = {}; for(const h of top) for(const c of h.pos) posCount[c]=(posCount[c]||0)+1;
+  const pos = Object.keys(posCount).sort((x,y)=>posCount[y]-posCount[x])[0];
+  const why = h => h.why.length ? `<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>` : "";
+  const meta = h => `${h.ranged?"Дальний бой":"Ближний бой"} · позиция ${h.pos.split("").join(" или ")}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
 
   out.innerHTML = `
   ${isDemo?`<div class="notice demo">Пример на открытом профиле. Вставь свою ссылку сверху — получишь свой разбор.</div>`:""}
   <div class="player">
     <div class="avatar">${p.avatarfull?`<img src="${esc(p.avatarfull)}" alt="" onerror="this.parentElement.textContent='${esc(initials(p.personaname||"?"))}'">`:esc(initials(p.personaname||"?"))}</div>
-    <div class="who"><div class="name">${esc(p.personaname||"Игрок "+p.account_id)}</div><div class="muted" style="font-size:13px">${a.games} игр · ${pct(a.p0)}% побед · ${esc(medal)}</div></div>
+    <div class="who"><div class="name">${esc(p.personaname||"Игрок "+p.account_id)}</div><div class="muted" style="font-size:13px">${beh?`Разобрано ${beh.n} ${plural(beh.n,"игра","игры","игр")}`:`${a.games} игр`} · ${pct(a.p0)}% побед · ${esc(medal)}</div></div>
   </div>
 
-  <section class="pick">
-    <div class="pick-role">
-      <span class="eyebrow">Тебе стоит играть</span>
-      <h2><span class="pn">${ch.pos}</span> ${esc(POS[ch.pos])}</h2>
-      <p>${esc(roleLine(ch,a))}</p>
-      <div class="alt"><span class="muted">Другая роль:</span>${altRoles.map(x=>`<button type="button" class="qc sm" data-role="${x}">${x} · ${POS[x]}</button>`).join("")}${ch.chosen?`<button type="button" class="qc sm" data-role="auto">Подскажи сам</button>`:""}</div>
-    </div>
-    <div class="eyebrow" style="margin-top:6px">Попробуй этих героев</div>
-    <div class="trio">${top.map(h=>`<article class="hc">
-        <div class="hc-img">${heroImg(h,false,true)}</div>
-        <div class="hc-b"><div class="hc-n">${esc(h.name)} ${dots(h.cx)}</div>
-          <div class="hc-m">${h.ranged?"Дальний бой":"Ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}</div>
-          ${h.why.length?`<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}
-          <button type="button" class="nope" data-id="${h.id}">Не нравится</button></div>
-      </article>`).join("")||`<div class="empty">Под такие условия героев не нашлось. Убери пару ограничений.</div>`}</div>
-    ${more.length?`<div class="more"><span class="muted">Ещё варианты:</span>${more.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
-    ${PREFS.likes.length?"":`<div class="hint-q">Отметь сверху, что тебе нравится в Доте, — подбор станет точнее.</div>`}
+  <section class="style">
+    <span class="eyebrow">Твой стиль</span>
+    <h2>Ты — ${esc(DIMS[k1].t.toLowerCase())}</h2>
+    <p>Тебе в кайф ${esc(DIMS[k1].s)}. А ещё — ${esc(DIMS[k2].s)}.</p>
+    <div class="dimbars">${prof.order.slice(0,5).map(k=>`<div class="db"><span>${esc(DIMS[k].t)}</span><i><b style="width:${Math.round(prof.v[k]/maxV*100)}%"></b></i></div>`).join("")}</div>
+    ${ins.length?`<div class="ins"><div class="mini">Что мы заметили в твоих играх</div><ul>${ins.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`:""}
+    ${answered?"":`<div class="hint-q">Ответь на вопросы сверху — так мы поймём, что тебе нравится, а не только где ты выигрывал.</div>`}
   </section>
+
+  ${hero?`<section class="reveal">
+    <span class="eyebrow">Твой герой</span>
+    <article class="big">
+      <div class="big-img">${heroImg(hero,false,true)}</div>
+      <div class="big-b">
+        <h2>${esc(hero.name)} ${dotsCx(hero.cx)}</h2>
+        <div class="tags">${dimTags(hero.dims)}</div>
+        <div class="hc-m">${meta(hero)}</div>
+        ${why(hero)}
+        <div class="btns"><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
+      </div>
+    </article>
+    ${top.length>1?`<div class="eyebrow" style="margin-top:8px">И ещё двое</div>
+    <div class="duo">${top.slice(1).map(h=>`<article class="hc">
+      <div class="hc-img">${heroImg(h,false,true)}</div>
+      <div class="hc-b"><div class="hc-n">${esc(h.name)} ${dotsCx(h.cx)}</div><div class="tags">${dimTags(h.dims)}</div><div class="hc-m">${meta(h)}</div>${why(h)}
+        <button type="button" class="nope" data-id="${h.id}">Не моё</button></div></article>`).join("")}</div>`:""}
+    ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
+    ${pos?`<div class="posline">Играть их удобнее всего на позиции <b>${pos} · ${POS[pos]}</b>.</div>`:""}
+  </section>`:`<div class="notice">Под такие ограничения героев не нашлось. Убери пару ограничений.</div>`}
 
   <details class="deep"><summary>Подробный разбор: навыки, стиль, тренд, матчи</summary><div class="deep-in">${detailsHTML(d,a,isDemo)}</div></details>`;
 
-  out.querySelectorAll("[data-role]").forEach(b=>b.addEventListener("click",()=>{ PREFS.role=b.dataset.role; savePrefs(); renderQuiz(); drawResult(); document.querySelector(".pick").scrollIntoView({behavior:"smooth",block:"start"}); }));
   out.querySelectorAll(".nope").forEach(b=>b.addEventListener("click",()=>{ PREFS.ban=[...PREFS.ban,+b.dataset.id]; savePrefs(); renderQuiz(); drawResult(); }));
-  const pb = document.getElementById("parseBtn");
+  const pb=document.getElementById("parseBtn");
   if(pb) pb.addEventListener("click", async ()=>{
     pb.disabled=true;
-    const ids = (d.full||[]).filter(m=>!m.players.some(p=>p.lane_role!=null)).slice(0,10).map(m=>m.match_id);
-    const ok = await requestParse(ids, t=>{ pb.textContent=t; });
-    pb.textContent = ok ? `Отправлено ${ok}. Обнови разбор минут через 10` : "Не получилось отправить, попробуй позже";
+    const ids=(d.full||[]).filter(m=>!m.players.some(p=>p.lane_role!=null)).slice(0,10).map(m=>m.match_id);
+    const ok=await requestParse(ids,t=>{pb.textContent=t;});
+    pb.textContent = ok?`Отправлено ${ok}. Обнови разбор минут через 10`:"Не получилось отправить, попробуй позже";
   });
 }
 
