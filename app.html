@@ -354,6 +354,11 @@ details.opts[open] summary{margin-bottom:4px}
 .qh{display:flex;flex-direction:column;align-items:center;gap:2px}
 .qh i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .qd{font-size:12.5px;color:var(--muted)}
+.bold4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:860px){.bold4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.bold4{grid-template-columns:minmax(0,1fr)}}
+.hc.bold .hc-n{font-size:20px}
+.bw{font-size:13px;color:var(--muted)}
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1138,7 +1143,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
   const out = [];
   for(const id of Object.keys(HERO).map(Number)){
     if(ban.has(id) || skip.has(id)) continue;
-    const g = played.get(id)?.games||0; if(g>=5) continue;
+    const g = played.get(id)?.games||0; if(g >= (prefs._bold ? 10 : 5)) continue;
     const tp = TP[id]||""; const ps = tp.slice(1);
     const useRoles = prefs.roles.length ? prefs.roles : (roles ? roles.main.map(String) : []);
     if(useRoles.length && !useRoles.some(r=>ps.includes(r))) continue;
@@ -1153,11 +1158,12 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     let fit = 0; if(a.skills){ const dm=heroDemand(id); for(const k in dm) fit += dm[k]*(a.skills[k]-0.5); }
     const m = a.meta[id] ?? null;
     const sd = nd ? sdFit(id, nd) : 0;
-    const atkPen = (!prefs.atk.length && nd && nd.ranged!=null) ? Math.max(0, (ranged ? 1-nd.ranged : nd.ranged) - 0.35) * 70 : 0;
+    const atkPen = (!prefs.atk.length && nd && nd.ranged!=null) ? Math.max(0, (ranged ? 1-nd.ranged : nd.ranged) - 0.35) * (prefs._bold ? 25 : 50) : 0;
     const mf = mainFit(id, prefs._main);
     const qs = quadScore(id, prefs._quad).s;
     const primary = ps[0];
-    const score = sim*60 + sd - atkPen + mf + qs + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    const fl = flash(id) * (prefs._bold ? 35 : (prefs._seeker ? 12 : 4));
+    const score = sim*60 + sd - atkPen + mf + qs + fl + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
     const maxE = Math.max(...loved.map(x=>x.enjoy||1),1);
@@ -1175,7 +1181,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
     const br = sdBridge(id, beh); if(br) why.unshift(br);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
-    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, primary, mob:heroMob(id), kill:heroKill(id), push:heroPush(id), rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, primary, flash:flash(id), mob:heroMob(id), kill:heroKill(id), push:heroPush(id), rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
   }
   out.sort((x,y)=>y.score-x.score);
   // keep the three picks different from each other
@@ -1390,6 +1396,11 @@ function quadScore(id, Q){
   return {s};
 }
 
+/* ===== Flashy heroes: high ceiling, highlight plays, "вау" ===== */
+const FLASH = {145:1,126:1,106:1,17:1,13:1,114:1,120:1,107:1,74:1,82:1,10:1,34:1,113:1,86:1,110:1,136:1,131:1,155:1,
+  46:.6,93:.5,63:.5,138:.5,123:.4,128:.3,65:.6,9:.6,51:.5,14:.7,100:.5,88:.5,119:.5,92:.6,78:.7,80:.5,66:.5,91:.6,105:.5,21:.5,39:.6,11:.6,41:.6,97:.6,7:.7,33:.6,23:.4,16:.4,44:.5,8:.4,109:.5,89:.5};
+const flash = id => FLASH[id]||0;
+
 /* ===== Rendering ===== */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = n => String(n).split(/[\s'-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -1550,8 +1561,8 @@ function detailsHTML(d, a, isDemo){
   </section>`;
 }
 
-const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
 /* ===== Main screen: indirect quiz → your style → your hero ===== */
+const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
 let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs3")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs3", JSON.stringify(PREFS)); }catch(_){} };
 let STATE = null;
@@ -1601,7 +1612,11 @@ function drawResult(){
   const mot = motivation(beh, a);
   const nd = needs(beh, a, {...PREFS, _seeker: mot && mot.k==="seeker"});
   const Q = heroQuadrants(beh, a);
-  const {top, rest} = pickMagic(a, beh, prof, {...PREFS, _main: mainNeeds(beh), _quad: Q}, roles, nd);
+  const base = {...PREFS, _main: mainNeeds(beh), _quad: Q, _seeker: mot && mot.k==="seeker"};
+  const {top, rest} = pickMagic(a, beh, prof, base, roles, nd);
+  const taken = new Set(top.map(h=>h.id));
+  const boldAll = pickMagic(a, beh, prof, {...base, _bold:true}, roles, nd);
+  const bold = [...boldAll.top, ...boldAll.rest].filter(h=>!taken.has(h.id) && h.flash>=0.5).slice(0,4);
   const curRoles = PREFS.roles.length ? PREFS.roles.map(Number) : (roles?roles.main:[]);
   const ins = insights(beh, a);
   const k1=prof.order[0], k2=prof.order[1];
@@ -1662,6 +1677,12 @@ function drawResult(){
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
       <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">на ${esc(POS_ACC[h.rolePos])}</span> ${meta(h)}</div>${why(h)}
+        <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
+    ${bold.length?`<div class="eyebrow" style="margin-top:10px">Смелый выбор — зрелищные герои под твой стиль</div>
+    <div class="bold4">${bold.map(h=>`<article class="hc bold">
+      <div class="hc-img">${heroImg(h,false,true)}</div>
+      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="hc-m"><span class="rc">на ${esc(POS_ACC[h.rolePos])}</span> ${h.ranged?"дальний бой":"ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · новый для тебя"}</div>
+        ${h.why[0]?`<div class="bw">${esc(h.why[0])}</div>`:""}
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
     <div class="posline">«Беру» или «Интересно» — подберу ещё похожих. «Не моё» — уберу и учту почему.</div>
