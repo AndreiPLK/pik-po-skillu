@@ -1168,8 +1168,10 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
   // keep the three picks different from each other
   // main pick: a hero whose own position is your main role
   const mainRole = String(prefs.roles.length ? prefs.roles[0] : (roles ? roles.main[0] : ""));
-  const mainIdx = mainRole ? out.findIndex(h=>h.primary===mainRole) : 0;
-  if(mainIdx>0){ const [h]=out.splice(mainIdx,1); out.unshift(h); }
+  if(mainRole){ // all three picks from your main role first, other roles only if it runs out
+    const onMain = out.filter(h=>h.primary===mainRole), other = out.filter(h=>h.primary!==mainRole);
+    out.splice(0, out.length, ...onMain.slice(0,3), ...other, ...onMain.slice(3));
+  }
   const res=[], later=[];
   for(const h of out){ if(res.length>=3) break; if(res.some(r=>r.dims[0]===h.dims[0])) later.push(h); else res.push(h); }
   while(res.length<3 && later.length) res.push(later.shift());
@@ -1489,6 +1491,7 @@ function detailsHTML(d, a, isDemo){
   </section>`;
 }
 
+const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
 /* ===== Main screen: indirect quiz → your style → your hero ===== */
 let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs3")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs3", JSON.stringify(PREFS)); }catch(_){} };
@@ -1578,15 +1581,15 @@ function drawResult(){
       <div class="big-b">
         <h2>${esc(hero.name)}</h2>
         <div class="tags">${dimTags(hero.dims)}</div>${sdTags(hero)}
-        <div class="hc-m"><span class="rc">на ${esc(POS[hero.rolePos].toLowerCase())}</span> ${meta(hero)}</div>
+        <div class="hc-m"><span class="rc">на ${esc(POS_ACC[hero.rolePos])}</span> ${meta(hero)}</div>
         <p class="story">${esc(story(hero, mot, beh, nd, a))}</p>
         <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Беру</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
     </article>
-    ${top.length>1?`<div class="eyebrow" style="margin-top:8px">Если не зайдёт — запасные</div>
+    ${top.length>1?`<div class="eyebrow" style="margin-top:8px">Если не зайдёт — ещё двое</div>
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
-      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">на ${esc(POS[h.rolePos].toLowerCase())}</span> ${meta(h)}</div>${why(h)}
+      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">на ${esc(POS_ACC[h.rolePos])}</span> ${meta(h)}</div>${why(h)}
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
     <div class="posline">«Беру» или «Интересно» — подберу ещё похожих. «Не моё» — уберу и учту почему.</div>
