@@ -1143,7 +1143,8 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     const score = sim*60 + sd - atkPen + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
-    let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); if(!bridge||c>bridge.c) bridge={L,c}; }
+    const maxE = Math.max(...loved.map(x=>x.enjoy||1),1);
+    let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); const w=c*(0.6+0.4*(L.enjoy||maxE)/maxE); if(!bridge||w>bridge.w) bridge={L,c,w}; }
     if(bridge && bridge.c>=0.5){
       const ld = heroDims(bridge.L.id);
       const shared = DK.filter(k=>hd[k]>=0.5 && ld[k]>=0.5 && prof.v[k]>0).sort((x,y)=>prof.v[y]-prof.v[x]).slice(0,2);
@@ -1280,7 +1281,7 @@ function motivation(beh, a){
   const strongPicks = last.filter(m=>{ const h=a.heroes.find(x=>x.id===m.hero_id); return h && h.games>=10 && h.adj>a.p0+0.02; }).length / (last.length||1);
   let type;
   if(topShare>=0.35) type = {k:"onetrick", t:"Мастер одного героя", d:`${Math.round(topShare*100)}% последних игр — на ${HERO[topId].n}. Тебе нужен не новый главный герой, а второй — на случай, когда твоего забрали или законтрили.`};
-  else if(beh.distinct>=28 && topShare<0.2) type = {k:"seeker", t:"Ищущий", d:`За последние 100 игр — ${beh.distinct} разных героев, ${tried} героев ты пробовал всерьёз. Ты ни на ком не задерживаешься не потому, что не умеешь, а потому что становится скучно. Тебе нужен один герой на всю жизнь — такой, который не надоест.`};
+  else if(beh.distinct>=28 && topShare<0.2) type = {k:"seeker", t:"Ищущий", d:`За последние 100 игр — ${beh.distinct} ${plural(beh.distinct,"разный герой","разных героя","разных героев")}, а всерьёз (5+ игр) ты пробовал ${tried} ${plural(tried,"героя","героев","героев")}. Ты ни на ком не задерживаешься не потому, что не умеешь, а потому что становится скучно. Тебе нужен один герой на всю жизнь — такой, который не надоест.`};
   else if(strongPicks>=0.55) type = {k:"winner", t:"Победитель", d:`Больше половины игр ты берёшь героев, на которых уже выигрываешь. Тебе важен результат — значит, нужен герой, который поднимет рейтинг быстрее всего.`};
   else type = {k:"steady", t:"Стабильный", d:`У тебя есть свои герои, и ты к ним возвращаешься. Тебе нужен герой, который расширит пул и не сломает то, что работает.`};
   return {...type, topShare, topId:+topId, distinct:beh.distinct, tried, longLove};
@@ -1291,7 +1292,8 @@ function story(h, mot, beh, nd, a){
   if(!h) return "";
   const loved = beh ? beh.loved : [];
   const hd = heroDims(h.id);
-  const lovedLike = loved.filter(x=>x.id!==h.id).map(x=>({x,c:dcos(dvec(heroDims(x.id)),dvec(hd))})).sort((p,q)=>q.c-p.c)[0];
+  const maxE = Math.max(...loved.map(x=>x.enjoy||1),1);
+  const lovedLike = loved.filter(x=>x.id!==h.id).map(x=>{ const c=dcos(dvec(heroDims(x.id)),dvec(hd)); return {x,c,w:c*(0.6+0.4*(x.enjoy||1)/maxE)}; }).sort((p,q)=>q.w-p.w)[0];
   const pain = loved.find(x=>heroStart(x.id)===0 && x.wr<a.p0-0.05);
   const p = [];
   p.push(`Я думаю, тебе нужен ${h.name}.`);
