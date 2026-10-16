@@ -359,6 +359,12 @@ details.opts[open] summary{margin-bottom:4px}
 @media (max-width:420px){.bold4{grid-template-columns:minmax(0,1fr)}}
 .hc.bold .hc-n{font-size:20px}
 .bw{font-size:13px;color:var(--muted)}
+.already{display:flex;flex-direction:column;gap:10px}
+.al{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:center;background:var(--panel);border:1px solid var(--good);border-radius:12px;padding:14px}
+@media (max-width:600px){.al{grid-template-columns:minmax(0,1fr)}}
+.al .himg{width:100%;height:auto;aspect-ratio:16/9}
+.al h2{font-size:clamp(22px,3.6vw,30px)}
+.al p{margin:6px 0 0;font-size:15px}
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -732,6 +738,9 @@ async function loadPlayer(id, days, depth, progress){
   if(!profile.profile) return {missing:true};
   if(!heroStatsCache){ progress("Загружаю силу героев на рангах…"); try{ heroStatsCache = await getJSON(`/heroStats`); }catch(e){ if(e.kind==="network") throw e; heroStatsCache=null; } }
 
+  // which heroes people really play in the middle lane
+  let midStats = cacheGet("pik:mid", 3);
+  if(!midStats){ try{ const rows = await getJSON(`/scenarios/laneRoles?lane_role=2`); midStats={}; for(const x of rows){ const a=midStats[x.hero_id] ||= {g:0,w:0}; a.g+=+x.games; a.w+=+x.wins; } cacheSet("pik:mid", midStats); }catch(e){ if(e.kind==="network") throw e; midStats=null; } }
   const sample = (matches && matches.length ? matches : recent).filter(m=>m.gold_per_min!=null);
   // hero norms
   const freq = {}; for(const m of sample) freq[m.hero_id]=(freq[m.hero_id]||0)+1;
@@ -753,7 +762,7 @@ async function loadPlayer(id, days, depth, progress){
     progress(`Разбираю матчи целиком: ${++done} из ${mids.length}`);
   });
   full.sort((a,b)=>b.start_time-a.start_time);
-  return {profile:{...profile.profile, rank_tier:profile.rank_tier}, accountId:id, wl, heroes, counts, totals, recent, matches:sample, bench, heroStats:heroStatsCache, full};
+  return {profile:{...profile.profile, rank_tier:profile.rank_tier}, accountId:id, wl, heroes, counts, totals, recent, matches:sample, bench, heroStats:heroStatsCache, full, midStats};
 }
 
 async function requestParse(matchIds, progress){
@@ -1144,7 +1153,11 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
   for(const id of Object.keys(HERO).map(Number)){
     if(ban.has(id) || skip.has(id)) continue;
     const g = played.get(id)?.games||0; if(g >= (prefs._bold ? 10 : 5)) continue;
-    const tp = TP[id]||""; const ps = tp.slice(1);
+    const tp = TP[id]||""; let ps = tp.slice(1);
+    // mid only for heroes that are really played in the middle lane
+    const ms = prefs._mid && prefs._mid[id];
+    if(prefs._mid){ const realMid = ms && ms.g >= 150; if(ps.includes("2") && !realMid) ps = ps.replace("2",""); if(!ps.includes("2") && realMid && ms.g>=400) ps = "2"+ps; }
+    if(!ps) continue;
     const useRoles = prefs.roles.length ? prefs.roles : (roles ? roles.main.map(String) : []);
     if(useRoles.length && !useRoles.some(r=>ps.includes(r))) continue;
     const like = (prefs.like||[]).map(Number); if(like.includes(id)) continue;
@@ -1181,7 +1194,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
     const br = sdBridge(id, beh); if(br) why.unshift(br);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
-    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, primary, flash:flash(id), planB:planB(id), mob:heroMob(id), kill:heroKill(id), push:heroPush(id), rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, primary, midG: ms?ms.g:0, midWr: ms&&ms.g?ms.w/ms.g:null, flash:flash(id), planB:planB(id), mob:heroMob(id), kill:heroKill(id), push:heroPush(id), rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
   }
   out.sort((x,y)=>y.score-x.score);
   // keep the three picks different from each other
@@ -1410,6 +1423,15 @@ const PLANB_RAW = {46:.2,44:.2,32:.1,62:.3,88:.3,93:.3,70:.2,63:.3,8:.35,54:.3,6
   2:.9,96:.9,99:.6,129:.9,135:.9,137:.9,104:.6,69:.7,28:.6,60:.6,98:.7,108:.9,16:.9,38:.8,55:1,78:.9,100:.6,102:.7,103:1,120:.8,107:.7,136:.6,23:.9,19:.7,71:.6,14:.7,51:.7,65:.8,9:.6,59:.4,4:.5,15:.6,36:.7,47:.6,138:.7};
 const planB = id => PLANB_RAW[id] ?? 0.6;
 
+function heroAlready(Q, beh, roles, a){
+  if(!Q || !beh) return null;
+  const main = roles ? String(roles.main[0]) : null;
+  const cand = Q.mine.filter(r=>r.g>=30 && (!main || (TP[r.id]||"").slice(1).includes(main)));
+  if(!cand.length) return null;
+  const top = cand.map(r=>({...r, b: beh.list.find(h=>h.id===r.id)})).sort((x,y)=>(y.b?.enjoy||0)-(x.b?.enjoy||0))[0];
+  return top;
+}
+
 /* ===== Rendering ===== */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = n => String(n).split(/[\s'-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -1627,7 +1649,8 @@ function drawResult(){
   const mot = motivation(beh, a);
   const nd = needs(beh, a, {...PREFS, _seeker: mot && mot.k==="seeker"});
   const Q = heroQuadrants(beh, a);
-  const base = {...PREFS, _main: mainNeeds(beh), _quad: Q, _seeker: mot && mot.k==="seeker"};
+  const base = {...PREFS, _main: mainNeeds(beh), _quad: Q, _seeker: mot && mot.k==="seeker", _mid: d.midStats||null};
+  const already = heroAlready(Q, beh, roles, a);
   const {top, rest} = pickMagic(a, beh, prof, base, roles, nd);
   const taken = new Set(top.map(h=>h.id));
   const boldAll = pickMagic(a, beh, prof, {...base, _bold:true}, roles, nd);
@@ -1640,7 +1663,7 @@ function drawResult(){
   const hero = top[0];
   const pos = hero ? hero.pos[0] : null;
   const why = h => h.why.length ? `<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>` : "";
-  const meta = h => `${h.ranged?"дальний бой":"ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
+  const meta = h => `${h.ranged?"дальний бой":"ближний бой"}${h.rolePos==="2"&&h.midG?` · на миде у всех: ${h.midG} игр, ${Math.round(h.midWr*100)}% побед`:""}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
 
   out.innerHTML = `
   ${isDemo?`<div class="notice demo">Пример на открытом профиле. Вставь свою ссылку сверху — получишь свой разбор.</div>`:""}
@@ -1676,8 +1699,15 @@ function drawResult(){
     </div>
   </section>`:""}
 
+  ${already?`<section class="already">
+    <span class="eyebrow">Честно</span>
+    <div class="al">${heroImg({id:already.id,name:HERO[already.id].n,slug:HERO[already.id].s},false,true)}
+      <div><h2>Твой герой на всю жизнь, похоже, уже есть — ${esc(HERO[already.id].n)}</h2>
+      <p>${already.g} ${plural(already.g,"игра","игры","игр")}, ${Math.round(already.wr*100)}% побед${already.b&&already.b.retRate!=null?`, и после поражения ты возвращаешься к нему в ${Math.round(already.b.retRate*100)}% случаев`:""}. Ни один новый герой не даст такой гарантии: это доказано твоими же играми. Новых ниже стоит пробовать как второго героя, а не вместо него.</p></div></div>
+  </section>`:""}
+
   ${hero?`<section class="reveal">
-    <span class="eyebrow">Мой выбор для тебя</span>
+    <span class="eyebrow">${already?"Второй герой — мой выбор":"Мой выбор для тебя"}</span>
     <article class="big">
       <div class="big-img">${heroImg(hero,false,true)}</div>
       <div class="big-b">
