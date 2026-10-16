@@ -2014,7 +2014,7 @@ function drawResult(){
   const RV = L ? roleVerdict(L) : null;
   const pos = PREFS.roles.length ? +PREFS.roles[0] : (RV ? RV.pos : 2);
   const ban = new Set(PREFS.ban.map(Number));
-  const midOk = id => { if(pos!==2 || !d.midStats) return true; const s=d.midStats[id]; return s && s.g>=150; };
+  const midOk = id => { if(pos!==2 || !d.midStats) return true; if((TP[id]||"").slice(1).includes("2")) return true; const s=d.midStats[id]; return s && s.g>=150; };
   const onRole = id => (TP[id]||"").slice(1).includes(String(pos)) || (pos===2 && d.midStats && (d.midStats[id]?.g||0)>=400);
   // candidates: heroes you played on this role + the best new ones
   const maxE = Math.max(...(L?L.heroes:[]).map(h=>h.enjoy),1);
