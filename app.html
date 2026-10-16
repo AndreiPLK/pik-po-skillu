@@ -343,6 +343,17 @@ details.opts[open] summary{margin-bottom:4px}
 .story{margin:0;font-size:16px;line-height:1.6}
 .empty-start{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:24px 0}
 .empty-start p{margin:0;font-size:16px}
+.quads{display:flex;flex-direction:column;gap:10px}
+.qgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:820px){.qgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.qgrid{grid-template-columns:minmax(0,1fr)}}
+.qb{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.qb-mine{border-top:3px solid var(--good)} .qb-pain{border-top:3px solid var(--warn)} .qb-cold{border-top:3px solid var(--muted)} .qb-notme{border-top:3px solid var(--bad)}
+.qt{font-weight:600;font-size:13.5px}
+.qi{display:flex;flex-wrap:wrap;gap:6px}
+.qh{display:flex;flex-direction:column;align-items:center;gap:2px}
+.qh i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.qd{font-size:12.5px;color:var(--muted)}
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1121,6 +1132,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
   const beta = fitPreference(a.heroes, a.p0);
   const pv = dvec(prof.v);
   const wStat = prefs.goal.includes("rating") ? 1.2 : prefs.goal.includes("fun") ? 0.4 : 0.7;
+  const mineIds = new Set((prefs._quad?.mine||[]).map(r=>r.id));
   const loved = [...(prefs.like||[]).map(Number).filter(x=>HERO[x]).map(x=>({id:x,g:0,liked:true})), ...(beh?.loved || a.heroes.slice().sort((x,y)=>y.games-x.games).slice(0,8).map(h=>({id:h.id,g:h.games,wr:h.wr})))];
   const pickedQuiz = Object.values(prefs.quiz).flat();
   const out = [];
@@ -1143,12 +1155,13 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     const sd = nd ? sdFit(id, nd) : 0;
     const atkPen = (!prefs.atk.length && nd && nd.ranged!=null) ? Math.max(0, (ranged ? 1-nd.ranged : nd.ranged) - 0.35) * 70 : 0;
     const mf = mainFit(id, prefs._main);
+    const qs = quadScore(id, prefs._quad).s;
     const primary = ps[0];
-    const score = sim*60 + sd - atkPen + mf + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    const score = sim*60 + sd - atkPen + mf + qs + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
     const maxE = Math.max(...loved.map(x=>x.enjoy||1),1);
-    let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); const w=c*(0.6+0.4*(L.enjoy||maxE)/maxE); if(!bridge||w>bridge.w) bridge={L,c,w}; }
+    let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); const w=c*(0.6+0.4*(L.enjoy||maxE)/maxE)*(mineIds.has(L.id)?1.25:1); if(!bridge||w>bridge.w) bridge={L,c,w}; }
     if(bridge && bridge.c>=0.5){
       const ld = heroDims(bridge.L.id);
       const shared = DK.filter(k=>hd[k]>=0.5 && ld[k]>=0.5 && prof.v[k]>0).sort((x,y)=>prof.v[y]-prof.v[x]).slice(0,2);
@@ -1335,6 +1348,48 @@ function mainFit(id, mn){
   return -(gap(heroMob(id),mn.mob)*45 + gap(heroKill(id),mn.kill)*40 + gap(heroPush(id),mn.push)*20);
 }
 
+/* ===== Your heroes in four groups: like × works ===== */
+function heroQuadrants(beh, a){
+  if(!beh) return null;
+  const byId = new Map(a.heroes.map(h=>[h.id,h]));
+  const pool = beh.list.filter(h=>h.g>=5);
+  if(!pool.length) return null;
+  const maxE = Math.max(...pool.map(h=>h.enjoy),0.01);
+  const rows = pool.map(h=>{
+    const s = byId.get(h.id);
+    const works = ((s?s.adj:h.wr)-a.p0)*100 + (s && s.skill!=null ? (s.skill-0.5)*40 : 0);
+    const like = h.abandoned ? 0 : h.enjoy/maxE;
+    return {id:h.id, g:h.g, wr:h.wr, like, works};
+  });
+  const q = {
+    mine:   rows.filter(r=>r.like>=0.45 && r.works>=0).sort((x,y)=>y.like+y.works/20-(x.like+x.works/20)),
+    pain:   rows.filter(r=>r.like>=0.45 && r.works<0).sort((x,y)=>y.like-x.like),
+    cold:   rows.filter(r=>r.like<0.45 && r.works>=2).sort((x,y)=>y.works-x.works),
+    notme:  rows.filter(r=>r.like<0.3 && r.works<-2).sort((x,y)=>x.works-y.works)
+  };
+  // what the "love but it doesn't work" heroes have in common, compared with "mine"
+  const feats = {start:heroStart, mob:heroMob, kill:heroKill, push:heroPush, depth:heroDepth};
+  const avgOf = (arr,f)=> arr.length ? arr.reduce((s,r)=>s+f(r.id),0)/arr.length : null;
+  let why = null;
+  if(q.pain.length>=2 && q.mine.length>=2){
+    let best=null;
+    for(const k in feats){ const d = avgOf(q.pain,feats[k]) - avgOf(q.mine,feats[k]); if(!best || Math.abs(d)>Math.abs(best.d)) best={k,d}; }
+    const RU = {start:["тяжёлый старт","лёгкий старт"], mob:["мало мобильности","много мобильности"], kill:["медленно убивают","быстро убивают"], push:["слабо пушат","сильно пушат"], depth:["очень сложные","простые"]};
+    if(best && Math.abs(best.d)>=0.15) why = {k:best.k, d:best.d, text: best.d<0 ? RU[best.k][0] : RU[best.k][1]};
+  }
+  return {...q, why};
+}
+function quadScore(id, Q){
+  if(!Q) return {s:0};
+  const v = dvec(heroDims(id));
+  const near = arr => arr.slice(0,6).reduce((m,r)=>Math.max(m,dcos(v,dvec(heroDims(r.id)))),0);
+  let s = near(Q.mine)*14 - near(Q.notme)*10 - near(Q.cold)*6;
+  if(Q.why){ const f = {start:heroStart, mob:heroMob, kill:heroKill, push:heroPush, depth:heroDepth}[Q.why.k];
+    // stay away from what makes your favourites fail
+    s -= (Q.why.d<0 ? Math.max(0, 0.5 - f(id)) : Math.max(0, f(id) - 0.5)) * 20; }
+  return {s};
+}
+
 /* ===== Rendering ===== */
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const initials = n => String(n).split(/[\s'-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -1496,6 +1551,7 @@ function detailsHTML(d, a, isDemo){
 }
 
 const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
+const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
 /* ===== Main screen: indirect quiz → your style → your hero ===== */
 let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs3")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs3", JSON.stringify(PREFS)); }catch(_){} };
@@ -1545,7 +1601,8 @@ function drawResult(){
   const prof = buildProfile(beh, a.heroes, PREFS.quiz, {skills:a.skills, likeIds:PREFS.like, banIds:PREFS.ban});
   const mot = motivation(beh, a);
   const nd = needs(beh, a, {...PREFS, _seeker: mot && mot.k==="seeker"});
-  const {top, rest} = pickMagic(a, beh, prof, {...PREFS, _main: mainNeeds(beh)}, roles, nd);
+  const Q = heroQuadrants(beh, a);
+  const {top, rest} = pickMagic(a, beh, prof, {...PREFS, _main: mainNeeds(beh), _quad: Q}, roles, nd);
   const curRoles = PREFS.roles.length ? PREFS.roles.map(Number) : (roles?roles.main:[]);
   const ins = insights(beh, a);
   const k1=prof.order[0], k2=prof.order[1];
@@ -1577,6 +1634,18 @@ function drawResult(){
     <div class="rolepick"><span class="muted">Подбираю на роли, где ты реально играешь:</span>${[1,2,3,4,5].map(x=>`<button type="button" class="qc sm${curRoles.includes(x)?" on":""}" data-rp="${x}">${x} · ${POS[x]}${roles&&!PREFS.roles.length?` <span class="pc">${Math.round((roles.list.find(r=>r.p===x)?.share||0)*100)}%</span>`:""}</button>`).join("")}</div>
     ${PREFS.like.length?`<div class="likedrow"><span class="muted">Тебе интересны:</span>${PREFS.like.map(id=>HERO[id]?`<button type="button" class="bc lk2" data-unlike="${id}">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div>`:""}
   </section>
+
+  ${Q?`<section class="quads">
+    <span class="eyebrow">Как мы читаем твоих героев</span>
+    <div class="qgrid">
+      ${[["mine","Нравятся и получаются","На них и равняемся."],
+         ["pain","Нравятся, но не идут", Q.why?`У них общее: ${Q.why.text}. Такого избегаем.`:"Ищем то же ощущение, но без того, что мешает."],
+         ["cold","Получаются, но не тянут","Цифры хорошие, но ты их бросаешь. Похожих не предлагаем."],
+         ["notme","Не твоё","Похожих не предлагаем совсем."]].map(([k,t,d])=>`<div class="qb qb-${k}"><div class="qt">${t}</div>
+        <div class="qi">${Q[k].slice(0,4).map(r=>`<span class="qh" title="${esc(HERO[r.id]?.n||"")}: ${r.g} игр, ${Math.round(r.wr*100)}% побед">${heroImg({id:r.id,name:HERO[r.id]?.n||"?",slug:HERO[r.id]?.s},true)}<i>${Math.round(r.wr*100)}%</i></span>`).join("")||`<span class="muted">нет</span>`}</div>
+        <div class="qd">${esc(d)}</div></div>`).join("")}
+    </div>
+  </section>`:""}
 
   ${hero?`<section class="reveal">
     <span class="eyebrow">Мой выбор для тебя</span>
