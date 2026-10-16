@@ -1551,7 +1551,6 @@ function detailsHTML(d, a, isDemo){
 }
 
 const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
-const POS_ACC = {1:"керри",2:"мид",3:"оффлейн",4:"четвёрку",5:"пятёрку"};
 /* ===== Main screen: indirect quiz → your style → your hero ===== */
 let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs3")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs3", JSON.stringify(PREFS)); }catch(_){} };
