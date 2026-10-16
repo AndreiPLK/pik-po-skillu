@@ -316,6 +316,29 @@ details.opts[open] summary{margin-bottom:4px}
 .posline{font-size:14px;color:var(--muted)}
 .posline b{color:var(--fg)}
 
+
+.big-b,.hc-b{font-family:var(--body)}
+.needs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:720px}
+@media (max-width:560px){.needs{grid-template-columns:minmax(0,1fr)}}
+.nd{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.nl{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.nl span{color:var(--muted)} .nl b{font-weight:600}
+.nd>i{display:block;height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden}
+.nd>i b{display:block;height:100%;background:var(--gold)}
+.nh{font-size:12px;color:var(--muted)}
+.ins2{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14.5px;max-width:760px}
+.rolepick,.likedrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.rolepick .muted,.likedrow .muted{margin-right:4px}
+.qc .pc{opacity:.7;font-size:11.5px}
+.lk2{background:var(--good-soft)}
+.sdt{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);align-items:center}
+.sdt b{color:var(--fg);font-weight:600}
+.sdt span{display:inline-flex;gap:6px;align-items:center}
+.rc{display:inline-block;background:var(--gold-soft);color:var(--gold);border-radius:6px;padding:1px 8px;margin-right:6px;font-weight:600;font-size:12.5px}
+.yes{background:var(--good-soft);border:1px solid transparent;color:var(--good);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.yes:hover{border-color:var(--good)}
+.btns{flex-wrap:wrap;align-items:center}
+
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -324,7 +347,7 @@ details.opts[open] summary{margin-bottom:4px}
   <header class="head">
     <span class="eyebrow">Dota 2 · разбор по навыкам</span>
     <h1>Пик по скиллу</h1>
-    <p>Вставь ссылку на профиль и ответь на четыре вопроса. Мы разберём все твои игры, поймём, что тебе на самом деле в кайф, и найдём героя, которого ты ещё не пробовал.</p>
+    <p>Вставь ссылку на профиль и нажми «Разобрать». Мы разберём все твои игры, поймём, что тебе на самом деле в кайф — и как тебе легче начинать, — и найдём героя, которого ты ещё не пробовал.</p>
     <form class="search" id="f" novalidate>
       <input id="q" name="q" autocomplete="off" placeholder="Код друга из Доты, SteamID64 или ссылка Dotabuff / OpenDota / Stratz / Steam" aria-label="ID или ссылка на профиль">
       <select id="period" aria-label="Период">
@@ -1030,7 +1053,8 @@ function behaviour(all, p0){
   for(const m of ms){ run = m.hero_id===prev ? run+1 : 1; prev=m.hero_id; H[m.hero_id].maxStreak=Math.max(H[m.hero_id].maxStreak,run); }
   const list = Object.values(H).map(h=>{
     h.wr=h.w/h.g; h.retRate = h.loss>=3 ? h.ret/h.loss : null; h.daysAgo=Math.round((lastT-h.last)/DAY);
-    h.enjoy = Math.log(1+h.g) + (h.retRate!=null?h.retRate*1.5:0) + Math.min(1,h.recent/10) + (h.maxStreak>=3?.5:0);
+    const rec = Math.exp(-h.daysAgo/150);
+    h.enjoy = (Math.log(1+h.g) + (h.retRate!=null?h.retRate*1.5:0) + Math.min(1,h.recent/10)*1.5 + (h.maxStreak>=3?.5:0)) * (0.45+0.55*rec);
     h.abandoned = h.g>=8 && h.daysAgo>120 && h.wr>=p0+0.05;          // was good, stopped anyway
     h.quit = h.g>=1 && h.g<=3 && h.daysAgo>45;                        // tried and never came back
     return h;
@@ -1047,7 +1071,7 @@ function behaviour(all, p0){
     solo:{n:solo.length, wr:wrOf(solo)}, party:{n:party.length, wr:wrOf(party)}};
 }
 
-function buildProfile(beh, heroes, quiz){
+function buildProfile(beh, heroes, quiz, extra){
   const p = Object.fromEntries(DK.map(k=>[k,0]));
   const src = [];
   if(beh){
@@ -1061,6 +1085,13 @@ function buildProfile(beh, heroes, quiz){
     for(const h of top){ const d=heroDims(h.id); for(const k of DK) p[k]+= d[k]*Math.log(1+h.games)/tot; }
     src.push("heroes");
   }
+  // how you actually play, compared with the norm for the same heroes
+  if(extra && extra.skills){ const sk=extra.skills, add={L:sk.farm-0.5, A:(sk.dmg+sk.fight)/2-0.5, E:sk.fight-0.5, S:sk.push-0.5, B:sk.dmg-0.5};
+    const mx = Math.max(...Object.values(p),0.01); for(const k in add) p[k]+= Math.max(0,add[k])*mx*0.6; }
+  // your reactions on the page
+  if(extra && extra.likeIds) for(const id of extra.likeIds){ const d=heroDims(id); const mx=Math.max(...Object.values(p),0.01); for(const k of DK) p[k]+= d[k]*mx*0.45; }
+  if(extra && extra.banIds) for(const id of extra.banIds){ const d=heroDims(id); const mx=Math.max(...Object.values(p),0.01); for(const k of DK) p[k]-= d[k]*mx*0.15; }
+  for(const k of DK) p[k]=Math.max(0,p[k]);
   const picked = [];
   for(const q of QUIZ) for(const [id,,w] of q.a) if((quiz[q.k]||[]).includes(id)) picked.push(w);
   if(picked.length){
@@ -1075,24 +1106,26 @@ function buildProfile(beh, heroes, quiz){
   return {v:p, order, src};
 }
 
-const DEF_PREFS = {quiz:{scene:[],hate:[],other:[],praise:[]}, goal:[], roles:[], cx:[], atk:[], ban:[]};
+const DEF_PREFS = {quiz:{scene:[],hate:[],other:[],praise:[]}, goal:[], roles:[], cx:[], atk:[], ban:[], like:[], adj:{start:0,depth:0}};
 const quizText = id => { for(const q of QUIZ) for(const a of q.a) if(a[0]===id) return a[1]; return ""; };
 
-function pickMagic(a, beh, prof, prefs){
+function pickMagic(a, beh, prof, prefs, roles, nd){
   const played = new Map(a.heroes.map(h=>[h.id,h]));
   const ban = new Set(prefs.ban.map(Number));
   const skip = new Set([...(beh?.abandoned||[]).map(h=>h.id), ...(beh?.quit||[]).map(h=>h.id)]);
   const beta = fitPreference(a.heroes, a.p0);
   const pv = dvec(prof.v);
   const wStat = prefs.goal.includes("rating") ? 1.2 : prefs.goal.includes("fun") ? 0.4 : 0.7;
-  const loved = (beh?.loved || a.heroes.slice().sort((x,y)=>y.games-x.games).slice(0,8).map(h=>({id:h.id,g:h.games,wr:h.wr})));
+  const loved = [...(prefs.like||[]).map(Number).filter(x=>HERO[x]).map(x=>({id:x,g:0,liked:true})), ...(beh?.loved || a.heroes.slice().sort((x,y)=>y.games-x.games).slice(0,8).map(h=>({id:h.id,g:h.games,wr:h.wr})))];
   const pickedQuiz = Object.values(prefs.quiz).flat();
   const out = [];
   for(const id of Object.keys(HERO).map(Number)){
     if(ban.has(id) || skip.has(id)) continue;
     const g = played.get(id)?.games||0; if(g>=5) continue;
     const tp = TP[id]||""; const ps = tp.slice(1);
-    if(prefs.roles.length && !prefs.roles.some(r=>ps.includes(r))) continue;
+    const useRoles = prefs.roles.length ? prefs.roles : (roles ? roles.main.map(String) : []);
+    if(useRoles.length && !useRoles.some(r=>ps.includes(r))) continue;
+    const like = (prefs.like||[]).map(Number); if(like.includes(id)) continue;
     const cx = complexity(id);
     if(prefs.cx.length && !prefs.cx.includes(String(cx))) continue;
     const ranged = HERO[id].m==="Ranged";
@@ -1102,14 +1135,15 @@ function pickMagic(a, beh, prof, prefs){
     const v = heroVec(id); const pred = beta && v ? v.reduce((s,x,i)=>s+x*beta[i],0) : 0;
     let fit = 0; if(a.skills){ const dm=heroDemand(id); for(const k in dm) fit += dm[k]*(a.skills[k]-0.5); }
     const m = a.meta[id] ?? null;
-    const score = sim*70 + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    const sd = nd ? sdFit(id, nd) : 0;
+    const score = sim*60 + sd + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
     let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); if(!bridge||c>bridge.c) bridge={L,c}; }
     if(bridge && bridge.c>=0.5){
       const ld = heroDims(bridge.L.id);
       const shared = DK.filter(k=>hd[k]>=0.5 && ld[k]>=0.5 && prof.v[k]>0).sort((x,y)=>prof.v[y]-prof.v[x]).slice(0,2);
-      if(shared.length) why.push(`То же, за что ты любишь ${HERO[bridge.L.id].n}: ${shared.map(k=>DIMS[k].s).join(", ")}.`);
+      if(shared.length) why.push(bridge.L.liked ? `Похож на ${HERO[bridge.L.id].n}, который тебе показался интересным: ${shared.map(k=>DIMS[k].s).join(", ")}.` : `То же, за что ты любишь ${HERO[bridge.L.id].n}: ${shared.map(k=>DIMS[k].s).join(", ")}.`);
     }
     const top = DK.filter(k=>hd[k]===1).sort((x,y)=>prof.v[y]-prof.v[x])[0];
     const qa = pickedQuiz.find(qid=>{ for(const q of QUIZ) for(const [aid,,w] of q.a) if(aid===qid && (w[top]||0)>=0.8) return true; return false; });
@@ -1117,8 +1151,9 @@ function pickMagic(a, beh, prof, prefs){
     const sharedSet = new Set(why.length && bridge ? DK.filter(k=>hd[k]>=0.5 && heroDims(bridge.L.id)[k]>=0.5) : []);
     const novel = DK.filter(k=>hd[k]===1 && prof.v[k]<0.15 && !sharedSet.has(k))[0];
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
+    const br = sdBridge(id, beh); if(br) why.unshift(br);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
-    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps});
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, start:heroStart(id), depth:heroDepth(id)});
   }
   out.sort((x,y)=>y.score-x.score);
   // keep the three picks different from each other
@@ -1139,6 +1174,84 @@ function insights(beh, a){
   else if(beh.distinct<=12) out.push(`За последние 100 игр всего ${beh.distinct} разных героев: ты держишься за своих.`);
   if(beh.tilt && beh.tilt.wr < a.p0-0.04) out.push(`После двух поражений подряд у тебя ${Math.round(beh.tilt.wr*100)}% побед. В такие моменты бери своего надёжного героя, а новых пробуй на свежую голову.`);
   return out.slice(0,3);
+}
+
+// Which positions you actually play, recent games weigh more
+function roleShares(all, a, bench){
+  const obs = {}; for(const r of (a.rows||[])){ (obs[r.hero_id] ||= {}); obs[r.hero_id][r.pos]=(obs[r.hero_id][r.pos]||0)+1; }
+  const ms = (all||[]).filter(m=>m.hero_id); if(!ms.length) return null;
+  const lastT = Math.max(...ms.map(m=>m.start_time)), sh={1:0,2:0,3:0,4:0,5:0};
+  for(const m of ms){
+    const w = Math.exp(-(lastT-m.start_time)/86400/120);
+    const cand = (TP[m.hero_id]||"").slice(1).split("").filter(Boolean).map(Number); if(!cand.length) continue;
+    const o = obs[m.hero_id];
+    if(o){ const n=Object.values(o).reduce((x,y)=>x+y,0); for(const p in o) sh[p]+=w*o[p]/n; continue; }
+    if(m.lane_role===2 && cand.includes(2)){ sh[2]+=w; continue; }
+    if(cand.length===1){ sh[cand[0]]+=w; continue; }
+    const b = bench && bench[m.hero_id];
+    if(b && m.gold_per_min!=null){
+      const core = m.gold_per_min >= b.gold_per_min[4];
+      const pick = core ? cand.filter(x=>x<=3) : cand.filter(x=>x>=4);
+      if(pick.length){ for(const x of pick) sh[x]+=w/pick.length; continue; }
+    }
+    for(const x of cand) sh[x]+=w/cand.length;
+  }
+  const tot = Object.values(sh).reduce((x,y)=>x+y,0)||1;
+  const list = Object.entries(sh).map(([p,v])=>({p:+p,share:v/tot})).sort((x,y)=>y.share-x.share);
+  const main = list.filter(x=>x.share>=0.18).slice(0,2).map(x=>x.p);
+  return {list, main: main.length?main:[list[0].p]};
+}
+
+/* ===== Start and depth: how painful the first minutes are, and how interesting it gets later =====
+   start: 1 тяжело начинать (слабая линия, страдаешь) … 3 легко (сильная линия, безопасно)
+   depth: 1 простой … 3 глубокий (много решений и механик, интересно дальше) */
+const SD_RAW = {1:"12",2:"31",3:"22",4:"31",5:"21",6:"21",7:"23",8:"22",9:"23",10:"13",11:"22",12:"12",13:"23",14:"23",15:"31",16:"22",17:"23",18:"21",19:"22",20:"21",21:"23",22:"31",23:"22",25:"32",26:"21",27:"31",28:"21",29:"31",30:"21",31:"31",32:"12",33:"12",34:"23",35:"21",36:"31",37:"21",38:"23",39:"32",40:"31",41:"12",42:"21",43:"31",44:"21",45:"32",46:"33",47:"31",48:"21",49:"31",50:"22",51:"32",52:"32",53:"23",54:"21",55:"23",56:"22",57:"21",58:"22",59:"31",60:"31",61:"33",62:"21",63:"12",64:"31",65:"33",66:"13",67:"11",68:"22",69:"22",70:"21",71:"21",72:"21",73:"12",74:"13",75:"21",76:"32",77:"22",78:"23",79:"23",80:"33",81:"21",82:"13",83:"22",84:"31",85:"31",86:"23",87:"22",88:"22",89:"13",90:"22",91:"13",92:"33",93:"22",94:"11",95:"31",96:"31",97:"22",98:"32",99:"31",100:"22",101:"31",102:"31",103:"23",104:"31",105:"23",106:"23",107:"23",108:"31",109:"22",110:"22",111:"23",112:"22",113:"33",114:"33",119:"32",120:"23",121:"22",123:"32",126:"23",128:"32",129:"32",131:"23",135:"31",136:"32",137:"31",138:"22",145:"23",155:"22"};
+const heroStart = id => (+((SD_RAW[id]||"22")[0]) - 1)/2;   // 0 тяжело … 1 легко
+const heroDepth = id => (+((SD_RAW[id]||"22")[1]) - 1)/2;   // 0 просто … 1 глубоко
+const START_RU = v => v>=0.75?"лёгкий":v>=0.25?"обычный":"тяжёлый";
+
+// What this player needs from the start and from depth, read from behaviour
+function needs(beh, a, prefs){
+  const adj = prefs.adj || {start:0, depth:0};
+  const ev = [];
+  let start = 0.5, depth = 0.5;
+  if(beh && beh.loved.length){
+    const tot = beh.loved.reduce((s,h)=>s+h.enjoy,0)||1;
+    depth = beh.loved.reduce((s,h)=>s+heroDepth(h.id)*h.enjoy,0)/tot;
+    const lovedStart = beh.loved.reduce((s,h)=>s+heroStart(h.id)*h.enjoy,0)/tot;
+    // heroes with a painful start you tried and dropped
+    const dropped = [...beh.abandoned, ...beh.quit].filter(h=>heroStart(h.id)===0);
+    const droppedGames = dropped.reduce((s,h)=>s+h.g,0);
+    // painful-start heroes you love but lose on
+    const sufferLove = beh.loved.filter(h=>heroStart(h.id)===0 && h.wr < a.p0-0.05);
+    start = 0.35 + 0.15*Math.min(1,droppedGames/15) + 0.15*Math.min(1,sufferLove.length/2) + 0.2*lovedStart;
+    if(sufferLove[0]) ev.push(`К ${HERO[sufferLove[0].id].n} ты возвращаешься, но выигрываешь только ${Math.round(sufferLove[0].wr*100)}% — тяжёлое начало тебя ломает. Значит, нужен герой, которому не больно начинать.`);
+    else if(dropped[0]) ev.push(`${HERO[dropped[0].id].n} с тяжёлым стартом ты попробовал и бросил. Значит, начало должно быть комфортным.`);
+    const deep = beh.loved.filter(h=>heroDepth(h.id)===1).slice(0,2);
+    if(deep.length) ev.push(`При этом тебя тянет к сложным героям — ${deep.map(h=>HERO[h.id].n).join(" и ")}. Простой герой тебе быстро надоест.`);
+    else if(depth<0.4) ev.push("Ты любишь понятных героев без лишних кнопок.");
+  }
+  if(a.skills && a.skills.surv<0.4) start += 0.1;
+  start = Math.max(0, Math.min(1, start + adj.start));
+  depth = Math.max(0, Math.min(1, depth + adj.depth));
+  return {start, depth, ev};
+}
+function sdFit(id, nd){
+  const s = heroStart(id), dp = heroDepth(id);
+  const startPen = Math.max(0, nd.start - s) * 30;
+  const depthPen = Math.max(0, nd.depth - dp) * 26 + Math.max(0, dp - nd.depth - 0.5) * 12;
+  return -startPen - depthPen;
+}
+// "Start like X, depth like Y" — built from the player's own heroes
+function sdBridge(id, beh){
+  if(!beh) return null;
+  const s = heroStart(id), dp = heroDepth(id);
+  const easyLike = beh.loved.find(h=>heroStart(h.id)===s && h.id!==id && s>=0.5);
+  const deepLike = beh.loved.find(h=>heroDepth(h.id)===dp && h.id!==id && dp===1 && (!easyLike || h.id!==easyLike.id));
+  if(easyLike && deepLike) return `Начинать легко, как на ${HERO[easyLike.id].n}, а дальше интересно, как на ${HERO[deepLike.id].n}.`;
+  if(easyLike && s===1) return `Начинать так же легко, как на ${HERO[easyLike.id].n}.`;
+  if(deepLike) return `Глубина как у ${HERO[deepLike.id].n}: есть что осваивать.`;
+  return null;
 }
 
 /* ===== Rendering ===== */
@@ -1302,8 +1415,8 @@ function detailsHTML(d, a, isDemo){
 }
 
 /* ===== Main screen: indirect quiz → your style → your hero ===== */
-let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs2")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
-const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs2", JSON.stringify(PREFS)); }catch(_){} };
+let PREFS = (()=>{ try{ const p=JSON.parse(localStorage.getItem("pik:prefs3")||"{}"); return {...DEF_PREFS, ...p, quiz:{...DEF_PREFS.quiz, ...(p.quiz||{})}}; }catch(_){ return JSON.parse(JSON.stringify(DEF_PREFS)); } })();
+const savePrefs = ()=>{ try{ localStorage.setItem("pik:prefs3", JSON.stringify(PREFS)); }catch(_){} };
 let STATE = null;
 
 function toggle(arr, v){ return arr.includes(v) ? arr.filter(x=>x!==v) : [...arr, v]; }
@@ -1315,16 +1428,13 @@ function renderQuiz(){
   const el = document.getElementById("quiz");
   const names = Object.entries(HERO).map(([id,h])=>[+id,h.n]).sort((a,b)=>a[1].localeCompare(b[1]));
   const answered = Object.values(PREFS.quiz).flat().length;
-  el.innerHTML = `
-    <div class="qhead"><b>Четыре вопроса — без слова «герой»</b><span>Отмечай сколько хочешь вариантов. Ответы меняют результат сразу.</span></div>
-    ${QUIZ.map(q=>`<div class="q"><div class="ql">${esc(q.q)}</div>${chips("quiz",q.k,q.a.map(([id,t])=>[id,t]))}</div>`).join("")}
-    <details class="opts"${PREFS.goal.length||PREFS.roles.length||PREFS.cx.length||PREFS.atk.length||PREFS.ban.length?" open":""}><summary>Ограничения, если хочешь</summary>
-      <div class="q"><div class="ql">Цель</div>${chips("p","goal",[["rating","Поднять рейтинг"],["fun","Кайфовать"],["learn","Освоить новое"]])}</div>
-      <div class="q"><div class="ql">Роли</div>${chips("p","roles",[["1","1 · Керри"],["2","2 · Мид"],["3","3 · Оффлейн"],["4","4 · Четвёрка"],["5","5 · Пятёрка"]])}</div>
-      <div class="q two"><div><div class="ql">Сложность</div>${chips("p","cx",[["1","Простой"],["2","Средний"],["3","Сложный"]])}</div>
-        <div><div class="ql">Атака</div>${chips("p","atk",[["melee","Ближний бой"],["ranged","Дальний бой"]])}</div></div>
-      <div class="q"><div class="ql">Кого не предлагать</div><div class="ban"><input id="banIn" list="heroList" placeholder="Начни вводить имя героя" autocomplete="off" aria-label="Герой, которого не предлагать"><datalist id="heroList">${names.map(([,n])=>`<option value="${esc(n)}">`).join("")}</datalist>
-        ${PREFS.ban.map(id=>HERO[id]?`<button type="button" class="bc" data-id="${id}" title="Вернуть">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div></div>
+  const nQ = Object.values(PREFS.quiz).flat().length;
+  el.innerHTML = `<details class="opts"${nQ||PREFS.cx.length||PREFS.atk.length||PREFS.ban.length?" open":""}><summary>Не попали? Уточни парой ответов (необязательно)</summary>
+    ${QUIZ.filter(q=>q.k==="scene"||q.k==="praise").map(q=>`<div class="q"><div class="ql">${esc(q.q)}</div>${chips("quiz",q.k,q.a.map(([id,t])=>[id,t]))}</div>`).join("")}
+    <div class="q two"><div><div class="ql">Сложность</div>${chips("p","cx",[["1","Простой"],["2","Средний"],["3","Сложный"]])}</div>
+      <div><div class="ql">Атака</div>${chips("p","atk",[["melee","Ближний бой"],["ranged","Дальний бой"]])}</div></div>
+    <div class="q"><div class="ql">Кого не предлагать</div><div class="ban"><input id="banIn" list="heroList" placeholder="Начни вводить имя героя" autocomplete="off" aria-label="Герой, которого не предлагать"><datalist id="heroList">${names.map(([,n])=>`<option value="${esc(n)}">`).join("")}</datalist>
+      ${PREFS.ban.map(id=>HERO[id]?`<button type="button" class="bc" data-id="${id}" title="Вернуть">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div></div>
     </details>`;
   el.querySelectorAll(".chips-q").forEach(row=>row.addEventListener("click",e=>{
     const b=e.target.closest(".qc"); if(!b) return;
@@ -1340,6 +1450,7 @@ function renderQuiz(){
 function render(d, isDemo){ const a=analyze(d); const beh=behaviour(d.matches, a.p0); STATE={d,a,beh,isDemo}; drawResult(); }
 const dotsCx = n => `<span class="cx" title="Сложность">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
 const dimTags = ks => ks.slice(0,3).map(k=>`<span class="dt">${esc(DIMS[k].t)}</span>`).join("");
+const sdTags = h => `<div class="sdt"><span>Старт: <b>${START_RU(h.start)}</b></span><span>Глубина: ${dotsCx(Math.round(h.depth*2)+1)}</span></div>`;
 
 function drawResult(){
   if(!STATE) return;
@@ -1347,8 +1458,11 @@ function drawResult(){
   const out = document.getElementById("out");
   if(!a.games){ out.innerHTML=`<div class="notice err">В этом профиле нет рейтинговых игр за выбранный период. Попробуй «Всё время».</div>`; return; }
   const p=d.profile, rt=p.rank_tier, medal = rt ? `${MEDALS[Math.floor(rt/10)]||"—"} ${rt%10||""}`.trim() : "нет медали";
-  const prof = buildProfile(beh, a.heroes, PREFS.quiz);
-  const {top, rest} = pickMagic(a, beh, prof, PREFS);
+  const roles = roleShares(d.matches, a, d.bench);
+  const prof = buildProfile(beh, a.heroes, PREFS.quiz, {skills:a.skills, likeIds:PREFS.like, banIds:PREFS.ban});
+  const nd = needs(beh, a, PREFS);
+  const {top, rest} = pickMagic(a, beh, prof, PREFS, roles, nd);
+  const curRoles = PREFS.roles.length ? PREFS.roles.map(Number) : (roles?roles.main:[]);
   const ins = insights(beh, a);
   const k1=prof.order[0], k2=prof.order[1];
   const answered = Object.values(PREFS.quiz).flat().length;
@@ -1356,7 +1470,7 @@ function drawResult(){
   const hero = top[0];
   const pos = hero ? hero.pos[0] : null;
   const why = h => h.why.length ? `<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>` : "";
-  const meta = h => `${h.ranged?"Дальний бой":"Ближний бой"} · позиция ${h.pos.split("").join(" или ")}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
+  const meta = h => `${h.ranged?"дальний бой":"ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
 
   out.innerHTML = `
   ${isDemo?`<div class="notice demo">Пример на открытом профиле. Вставь свою ссылку сверху — получишь свой разбор.</div>`:""}
@@ -1369,9 +1483,14 @@ function drawResult(){
     <span class="eyebrow">Твой стиль</span>
     <h2>Ты — ${esc(DIMS[k1].t.toLowerCase())}</h2>
     <p>Тебе в кайф ${esc(DIMS[k1].s)}. А ещё — ${esc(DIMS[k2].s)}.</p>
-    <div class="dimbars">${prof.order.slice(0,5).map(k=>`<div class="db"><span>${esc(DIMS[k].t)}</span><i><b style="width:${Math.round(prof.v[k]/maxV*100)}%"></b></i></div>`).join("")}</div>
-    ${ins.length?`<div class="ins"><div class="mini">Что мы заметили в твоих играх</div><ul>${ins.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`:""}
-    ${answered?"":`<div class="hint-q">Ответь на вопросы сверху — так мы поймём, что тебе нравится, а не только где ты выигрывал.</div>`}
+    ${ins.length?`<ul class="ins2">${ins.slice(0,2).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+    <div class="needs">
+      <div class="nd"><div class="nl"><span>Старт</span><b>${nd.start>=0.6?"нужен лёгкий":nd.start>=0.35?"обычный":"можно и тяжёлый"}</b></div><i><b style="width:${Math.round(nd.start*100)}%"></b></i><div class="nh">насколько легко должно быть в начале игры</div></div>
+      <div class="nd"><div class="nl"><span>Глубина</span><b>${nd.depth>=0.65?"нужен сложный":nd.depth>=0.35?"средняя":"попроще"}</b></div><i><b style="width:${Math.round(nd.depth*100)}%"></b></i><div class="nh">насколько интересно и сложно дальше</div></div>
+    </div>
+    ${nd.ev.length?`<ul class="ins2">${nd.ev.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+    <div class="rolepick"><span class="muted">Подбираю на роли, где ты реально играешь:</span>${[1,2,3,4,5].map(x=>`<button type="button" class="qc sm${curRoles.includes(x)?" on":""}" data-rp="${x}">${x} · ${POS[x]}${roles&&!PREFS.roles.length?` <span class="pc">${Math.round((roles.list.find(r=>r.p===x)?.share||0)*100)}%</span>`:""}</button>`).join("")}</div>
+    ${PREFS.like.length?`<div class="likedrow"><span class="muted">Тебе интересны:</span>${PREFS.like.map(id=>HERO[id]?`<button type="button" class="bc lk2" data-unlike="${id}">${esc(HERO[id].n)} ✕</button>`:"").join("")}</div>`:""}
   </section>
 
   ${hero?`<section class="reveal">
@@ -1379,25 +1498,38 @@ function drawResult(){
     <article class="big">
       <div class="big-img">${heroImg(hero,false,true)}</div>
       <div class="big-b">
-        <h2>${esc(hero.name)} ${dotsCx(hero.cx)}</h2>
-        <div class="tags">${dimTags(hero.dims)}</div>
-        <div class="hc-m">${meta(hero)}</div>
+        <h2>${esc(hero.name)}</h2>
+        <div class="tags">${dimTags(hero.dims)}</div>${sdTags(hero)}
+        <div class="hc-m"><span class="rc">${esc(POS[hero.pos[0]])}</span> ${meta(hero)}</div>
         ${why(hero)}
-        <div class="btns"><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
+        <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Интересно</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
     </article>
     ${top.length>1?`<div class="eyebrow" style="margin-top:8px">И ещё двое</div>
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
-      <div class="hc-b"><div class="hc-n">${esc(h.name)} ${dotsCx(h.cx)}</div><div class="tags">${dimTags(h.dims)}</div><div class="hc-m">${meta(h)}</div>${why(h)}
-        <button type="button" class="nope" data-id="${h.id}">Не моё</button></div></article>`).join("")}</div>`:""}
+      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">${esc(POS[h.pos[0]])}</span> ${meta(h)}</div>${why(h)}
+        <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
-    ${pos?`<div class="posline">${esc(hero.name)} играется на позиции <b>${pos} · ${POS[pos]}</b>.</div>`:""}
+    <div class="posline">«Интересно» — подберу ещё похожих. «Не моё» — уберу и учту, что такое тебе не заходит.</div>
   </section>`:`<div class="notice">Под такие ограничения героев не нашлось. Убери пару ограничений.</div>`}
 
   <details class="deep"><summary>Подробный разбор: навыки, стиль, тренд, матчи</summary><div class="deep-in">${detailsHTML(d,a,isDemo)}</div></details>`;
 
-  out.querySelectorAll(".nope").forEach(b=>b.addEventListener("click",()=>{ PREFS.ban=[...PREFS.ban,+b.dataset.id]; savePrefs(); renderQuiz(); drawResult(); }));
+  out.querySelectorAll(".yes").forEach(b=>b.addEventListener("click",()=>{ PREFS.like=[...new Set([...PREFS.like,+b.dataset.id])]; savePrefs(); drawResult(); }));
+  out.querySelectorAll("[data-unlike]").forEach(b=>b.addEventListener("click",()=>{ PREFS.like=PREFS.like.filter(x=>x!==+b.dataset.unlike); savePrefs(); drawResult(); }));
+  out.querySelectorAll("[data-rp]").forEach(b=>b.addEventListener("click",()=>{ const x=b.dataset.rp; const base = PREFS.roles.length?PREFS.roles:curRoles.map(String); PREFS.roles = base.includes(x)?base.filter(r=>r!==x):[...base,x]; savePrefs(); drawResult(); }));
+  out.querySelectorAll(".nope").forEach(b=>b.addEventListener("click",()=>{
+    const id=+b.dataset.id, box=b.parentElement;
+    box.innerHTML = `<span class="muted">Почему?</span>${[["style","Не мой стиль"],["start","Тяжело начинать"],["boring","Скучный"],["hard","Слишком сложный"]].map(([k,t])=>`<button type="button" class="qc sm" data-why="${k}">${t}</button>`).join("")}`;
+    box.querySelectorAll("[data-why]").forEach(w=>w.addEventListener("click",()=>{
+      const k=w.dataset.why, adj={...(PREFS.adj||{start:0,depth:0})};
+      if(k==="start") adj.start=Math.min(0.6,adj.start+0.25);
+      if(k==="boring") adj.depth=Math.min(0.6,adj.depth+0.25);
+      if(k==="hard") adj.depth=Math.max(-0.6,adj.depth-0.25);
+      PREFS.adj=adj; PREFS.ban=[...PREFS.ban,id]; savePrefs(); renderQuiz(); drawResult();
+    }));
+  }));
   const pb=document.getElementById("parseBtn");
   if(pb) pb.addEventListener("click", async ()=>{
     pb.disabled=true;
