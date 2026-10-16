@@ -1601,6 +1601,12 @@ const dimTags = ks => ks.slice(0,3).map(k=>`<span class="dt">${esc(DIMS[k].t)}</
 const lvl = v => Math.max(1, Math.min(3, Math.round(v*2.4)+0));
 const sdTags = h => `<div class="sdt"><span>Старт: <b>${START_RU(h.start)}</b></span><span>Глубина ${dotsCx(Math.round(h.depth*2)+1)}</span><span>Мобильность ${dotsCx(lvl(h.mob))}</span><span>Убийство ${dotsCx(lvl(h.kill))}</span><span>Пуш ${dotsCx(lvl(h.push))}</span></div>`;
 
+function boldWhy(h){
+  const w = h.why.find(x=>!/^Начал|^Начин|^Глубина как/.test(x));
+  if(w) return w;
+  const k = h.dims[0];
+  return k ? `Зрелищный: ${DIMS[k].s}. Таких героев запоминают.` : "Высокий потолок: на нём можно творить чудеса.";
+}
 function drawResult(){
   if(!STATE) return;
   const {d,a,beh,isDemo} = STATE;
@@ -1682,7 +1688,7 @@ function drawResult(){
     <div class="bold4">${bold.map(h=>`<article class="hc bold">
       <div class="hc-img">${heroImg(h,false,true)}</div>
       <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="hc-m"><span class="rc">на ${esc(POS_ACC[h.rolePos])}</span> ${h.ranged?"дальний бой":"ближний бой"}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · новый для тебя"}</div>
-        ${h.why[0]?`<div class="bw">${esc(h.why[0])}</div>`:""}
+        <div class="bw">${esc(boldWhy(h))}</div>
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
     <div class="posline">«Беру» или «Интересно» — подберу ещё похожих. «Не моё» — уберу и учту почему.</div>
