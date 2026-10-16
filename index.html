@@ -318,7 +318,7 @@ details.opts[open] summary{margin-bottom:4px}
 
 
 .big-b,.hc-b{font-family:var(--body)}
-.needs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:720px}
+.needs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:860px}
 @media (max-width:560px){.needs{grid-template-columns:minmax(0,1fr)}}
 .nd{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .nl{display:flex;justify-content:space-between;gap:8px;font-size:13px}
@@ -1136,7 +1136,8 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     let fit = 0; if(a.skills){ const dm=heroDemand(id); for(const k in dm) fit += dm[k]*(a.skills[k]-0.5); }
     const m = a.meta[id] ?? null;
     const sd = nd ? sdFit(id, nd) : 0;
-    const score = sim*60 + sd + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    const atkPen = (!prefs.atk.length && nd && nd.ranged!=null) ? Math.max(0, (ranged ? 1-nd.ranged : nd.ranged) - 0.35) * 70 : 0;
+    const score = sim*60 + sd - atkPen + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
     let bridge=null; for(const L of loved){ if(L.id===id) continue; const c=dcos(hv,dvec(heroDims(L.id))); if(!bridge||c>bridge.c) bridge={L,c}; }
@@ -1231,10 +1232,17 @@ function needs(beh, a, prefs){
     if(deep.length) ev.push(`При этом тебя тянет к сложным героям — ${deep.map(h=>HERO[h.id].n).join(" и ")}. Простой герой тебе быстро надоест.`);
     else if(depth<0.4) ev.push("Ты любишь понятных героев без лишних кнопок.");
   }
+  // melee or ranged: read from the heroes you love
+  let ranged = null, rangedN = 0, lovedN = 0;
+  if(beh && beh.loved.length){
+    const tot = beh.loved.reduce((s,h)=>s+h.enjoy,0)||1;
+    ranged = beh.loved.reduce((s,h)=>s+(HERO[h.id]?.m==="Ranged"?h.enjoy:0),0)/tot;
+    rangedN = beh.loved.filter(h=>HERO[h.id]?.m==="Ranged").length; lovedN = beh.loved.length;
+  }
   if(a.skills && a.skills.surv<0.4) start += 0.1;
   start = Math.max(0, Math.min(1, start + adj.start));
   depth = Math.max(0, Math.min(1, depth + adj.depth));
-  return {start, depth, ev};
+  return {start, depth, ev, ranged, rangedN, lovedN};
 }
 function sdFit(id, nd){
   const s = heroStart(id), dp = heroDepth(id);
@@ -1485,6 +1493,7 @@ function drawResult(){
     <p>Тебе в кайф ${esc(DIMS[k1].s)}. А ещё — ${esc(DIMS[k2].s)}.</p>
         <div class="needs">
       <div class="nd"><div class="nl"><span>Старт</span><b>${nd.start>=0.6?"нужен лёгкий":nd.start>=0.35?"обычный":"можно и тяжёлый"}</b></div><i><b style="width:${Math.round(nd.start*100)}%"></b></i><div class="nh">насколько легко должно быть в начале игры</div></div>
+      ${nd.ranged!=null?`<div class="nd"><div class="nl"><span>Атака</span><b>${nd.ranged>=0.65?"дальний бой":nd.ranged<=0.35?"ближний бой":"любая"}</b></div><i><b style="width:${Math.round(nd.ranged*100)}%"></b></i><div class="nh">${nd.rangedN} из ${nd.lovedN} любимых героев — дальнего боя</div></div>`:""}
       <div class="nd"><div class="nl"><span>Глубина</span><b>${nd.depth>=0.65?"нужен сложный":nd.depth>=0.35?"средняя":"попроще"}</b></div><i><b style="width:${Math.round(nd.depth*100)}%"></b></i><div class="nh">насколько интересно и сложно дальше</div></div>
     </div>
     ${(ins.slice(0,1).length||nd.ev.length)?`<ul class="ins2">${[...ins.slice(0,1),...nd.ev].slice(0,3).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
@@ -1520,12 +1529,14 @@ function drawResult(){
   out.querySelectorAll("[data-rp]").forEach(b=>b.addEventListener("click",()=>{ const x=b.dataset.rp; const base = PREFS.roles.length?PREFS.roles:curRoles.map(String); PREFS.roles = base.includes(x)?base.filter(r=>r!==x):[...base,x]; savePrefs(); drawResult(); }));
   out.querySelectorAll(".nope").forEach(b=>b.addEventListener("click",()=>{
     const id=+b.dataset.id, box=b.parentElement;
-    box.innerHTML = `<span class="muted">Почему?</span>${[["style","Не мой стиль"],["start","Тяжело начинать"],["boring","Скучный"],["hard","Слишком сложный"]].map(([k,t])=>`<button type="button" class="qc sm" data-why="${k}">${t}</button>`).join("")}`;
+    const isR = HERO[id]?.m==="Ranged";
+    box.innerHTML = `<span class="muted">Почему?</span>${[["style","Не мой стиль"],["start","Тяжело начинать"],["boring","Скучный"],["hard","Слишком сложный"],["atk", isR?"Не люблю дальний бой":"Не люблю ближний бой"]].map(([k,t])=>`<button type="button" class="qc sm" data-why="${k}">${t}</button>`).join("")}`;
     box.querySelectorAll("[data-why]").forEach(w=>w.addEventListener("click",()=>{
       const k=w.dataset.why, adj={...(PREFS.adj||{start:0,depth:0})};
       if(k==="start") adj.start=Math.min(0.6,adj.start+0.25);
       if(k==="boring") adj.depth=Math.min(0.6,adj.depth+0.25);
       if(k==="hard") adj.depth=Math.max(-0.6,adj.depth-0.25);
+      if(k==="atk") PREFS.atk=[isR?"melee":"ranged"];
       PREFS.adj=adj; PREFS.ban=[...PREFS.ban,id]; savePrefs(); renderQuiz(); drawResult();
     }));
   }));
