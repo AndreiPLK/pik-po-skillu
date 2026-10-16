@@ -1053,7 +1053,8 @@ function buildProfile(beh, heroes, quiz){
   if(beh){
     const tot = beh.loved.reduce((s,h)=>s+h.enjoy,0)||1;
     for(const h of beh.loved){ const d=heroDims(h.id); for(const k of DK) p[k]+= d[k]*h.enjoy/tot; }
-    for(const h of beh.abandoned.slice(0,3)){ const d=heroDims(h.id); for(const k of DK) p[k]-= d[k]*0.25; }
+    for(const h of beh.abandoned.slice(0,3)){ const d=heroDims(h.id); for(const k of DK) p[k]-= d[k]*0.08; }
+    for(const k of DK) p[k]=Math.max(0,p[k]);
     src.push("history");
   } else if(heroes && heroes.length){
     const top = heroes.slice().sort((a,b)=>b.games-a.games).slice(0,10), tot = top.reduce((s,h)=>s+Math.log(1+h.games),0)||1;
@@ -1113,7 +1114,8 @@ function pickMagic(a, beh, prof, prefs){
     const top = DK.filter(k=>hd[k]===1).sort((x,y)=>prof.v[y]-prof.v[x])[0];
     const qa = pickedQuiz.find(qid=>{ for(const q of QUIZ) for(const [aid,,w] of q.a) if(aid===qid && (w[top]||0)>=0.8) return true; return false; });
     if(qa) why.push(`Ты выбрал «${quizText(qa)}» — это прямо про него.`);
-    const novel = DK.filter(k=>hd[k]===1 && prof.v[k]<0.25)[0];
+    const sharedSet = new Set(why.length && bridge ? DK.filter(k=>hd[k]>=0.5 && heroDims(bridge.L.id)[k]>=0.5) : []);
+    const novel = DK.filter(k=>hd[k]===1 && prof.v[k]<0.15 && !sharedSet.has(k))[0];
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
     out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps});
@@ -1130,10 +1132,10 @@ function insights(beh, a){
   const out = [];
   if(!beh) return out;
   const L = beh.loved[0];
-  if(L) out.push(`${HERO[L.id].n}: ${L.g} игр${L.retRate!=null?`, и после поражения ты возвращался к нему в ${Math.round(L.retRate*100)}% случаев. Его ты по-настоящему любишь`:""}.`);
+  if(L) out.push(`${HERO[L.id].n}: ${L.g} ${plural(L.g,"игра","игры","игр")}${L.retRate!=null?`, и после поражения ты возвращался к нему в ${Math.round(L.retRate*100)}% случаев. Его ты по-настоящему любишь`:""}.`);
   const Ab = beh.abandoned[0];
-  if(Ab) out.push(`${HERO[Ab.id].n}: ${Math.round(Ab.wr*100)}% побед за ${Ab.g} игр — и ты его бросил. Значит, дело не в победах, а в ощущении от игры. Это учтено.`);
-  if(beh.distinct>=30) out.push(`За последние 100 игр ты брал ${beh.distinct} разных героев. Ты ищешь своего — и это нормально.`);
+  if(Ab) out.push(`${HERO[Ab.id].n}: ${Math.round(Ab.wr*100)}% побед за ${Ab.g} ${plural(Ab.g,"игру","игры","игр")} — и ты его бросил. Значит, дело не в победах, а в ощущении от игры. Это учтено.`);
+  if(beh.distinct>=30) out.push(`За последние 100 игр ты брал ${beh.distinct} ${plural(beh.distinct,"разного героя","разных героев","разных героев")}. Ты ищешь своего — и это нормально.`);
   else if(beh.distinct<=12) out.push(`За последние 100 игр всего ${beh.distinct} разных героев: ты держишься за своих.`);
   if(beh.tilt && beh.tilt.wr < a.p0-0.04) out.push(`После двух поражений подряд у тебя ${Math.round(beh.tilt.wr*100)}% побед. В такие моменты бери своего надёжного героя, а новых пробуй на свежую голову.`);
   return out.slice(0,3);
@@ -1352,8 +1354,7 @@ function drawResult(){
   const answered = Object.values(PREFS.quiz).flat().length;
   const maxV = Math.max(...Object.values(prof.v),0.01);
   const hero = top[0];
-  const posCount = {}; for(const h of top) for(const c of h.pos) posCount[c]=(posCount[c]||0)+1;
-  const pos = Object.keys(posCount).sort((x,y)=>posCount[y]-posCount[x])[0];
+  const pos = hero ? hero.pos[0] : null;
   const why = h => h.why.length ? `<ul>${h.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>` : "";
   const meta = h => `${h.ranged?"Дальний бой":"Ближний бой"} · позиция ${h.pos.split("").join(" или ")}${h.g?` · у тебя ${h.g} ${plural(h.g,"игра","игры","игр")}`:" · ты на нём не играл"}`;
 
@@ -1391,7 +1392,7 @@ function drawResult(){
       <div class="hc-b"><div class="hc-n">${esc(h.name)} ${dotsCx(h.cx)}</div><div class="tags">${dimTags(h.dims)}</div><div class="hc-m">${meta(h)}</div>${why(h)}
         <button type="button" class="nope" data-id="${h.id}">Не моё</button></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
-    ${pos?`<div class="posline">Играть их удобнее всего на позиции <b>${pos} · ${POS[pos]}</b>.</div>`:""}
+    ${pos?`<div class="posline">${esc(hero.name)} играется на позиции <b>${pos} · ${POS[pos]}</b>.</div>`:""}
   </section>`:`<div class="notice">Под такие ограничения героев не нашлось. Убери пару ограничений.</div>`}
 
   <details class="deep"><summary>Подробный разбор: навыки, стиль, тренд, матчи</summary><div class="deep-in">${detailsHTML(d,a,isDemo)}</div></details>`;
