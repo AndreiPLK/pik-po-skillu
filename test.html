@@ -378,6 +378,13 @@ details.opts[open] summary{margin-bottom:4px}
 @media (max-width:820px){.alt3{grid-template-columns:minmax(0,1fr)}}
 .dl{font-size:13px;color:var(--gold)}
 @media (max-width:520px){.lr{grid-template-columns:minmax(0,1fr);gap:2px}}
+.want{display:flex;flex-direction:column;gap:8px}
+.wantchips{display:flex;flex-wrap:wrap;gap:6px}
+.ways{display:flex;flex-direction:column;gap:6px}
+.ways ul{margin:0;padding-left:18px;font-size:14.5px;display:flex;flex-direction:column;gap:4px}
+.wv{font-size:13px;color:var(--good)}
+.alt2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.alt2{grid-template-columns:minmax(0,1fr)}}
 .loading{opacity:.45;pointer-events:none;transition:opacity .2s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1165,7 +1172,7 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
   const out = [];
   for(const id of Object.keys(HERO).map(Number)){
     if(ban.has(id) || skip.has(id)) continue;
-    const g = played.get(id)?.games||0; if(g >= (prefs._bold ? 10 : 5)) continue;
+    const g = played.get(id)?.games||0; if(g >= (prefs._maxG || (prefs._bold ? 10 : 5))) continue;
     const tp = TP[id]||""; let ps = tp.slice(1);
     // mid only for heroes that are really played in the middle lane
     const ms = prefs._mid && prefs._mid[id];
@@ -1862,12 +1869,12 @@ function lifeScore(h, L, prof, nd, mn, maxEnjoy, prefs){
     const wrv = Math.max(-1, Math.min(1, (h.adj-L.p0)*12));
     // a deep hero you are still learning is not judged by its win rate yet
     const wrWeight = progress<1 && heroDepth(h.id)>=0.5 ? 6 : 14;
-    let s = enj*32 + perf*18 + grow*10 + fit*18 + mf*10 + sd*6 + wrv*wrWeight;
+    let s = enj*32 + perf*18 + grow*10 + fit*18 + mf*10 + sd*6 + wrv*wrWeight + (vers(h.id)-0.6)*25;
     if(h.abandoned) s -= 30;
     return s;
   }
   // new hero: no personal data, only fit — and an honest discount for the unknown
-  return 0.35*32*0.5 + fit*18 + mf*10 + sd*6 - 4;
+  return 0.35*32*0.5 + fit*18 + mf*10 + sd*6 + (vers(h.id)-0.6)*25 - 4;
 }
 
 function heroVerdictLines(h, L){
@@ -1912,6 +1919,61 @@ function roleVerdict(L){
 const POS_ON = {1:"на керри",2:"на миде",3:"на оффлейне",4:"на четвёрке",5:"на пятёрке"};
 const POS_ACC2 = {1:"на керри",2:"на миде",3:"на оффлейне",4:"на четвёрке",5:"на пятёрке"};
 const cap = s => s ? s[0].toUpperCase()+s.slice(1) : s;
+
+/* ===== Versatility: can you play the hero in different ways, whatever the enemy picks ===== */
+const VERS = {
+ 74:[.95,"Quas-Wex: контроль и темп с первых минут","Quas-Exort: урон издалека и Санстрайки по всей карте","Wex-Exort: агрессивный мид и быстрые убийства"],
+ 53:[.95,"сплит-пуш: ломаешь башни, пока враги на другой стороне карты","гангер: телепорты и убийства по всей карте","поздний керри через фарм леса"],
+ 56:[.7,"убийца из невидимости","пуш армией скелетов","поздний керри с уроном с руки"],
+ 25:[.85,"урон заклинаниями с первых минут","керри через атаку и Fiery Soul","четвёрка с контролем"],
+ 39:[.75,"мид-гангер с ранним давлением","урон по площади в драках","поздняя игра через предметы на урон"],
+ 17:[.7,"гангер по всей карте","фарм и поздний керри","охота за одной целью"],
+ 126:[.8,"магический урон и комбо","физический урон с руки","мобильный гангер"],
+ 106:[.85,"физический билд через атаку","магический билд через заклинания","гангер по карте"],
+ 145:[.7,"катана: уклонения и быстрые комбо","сай: контроль и сила","охота за одной целью"],
+ 13:[.75,"инициатор драк","неуловимый гангер","урон магией по площади"],
+ 34:[.7,"пуш и давление по всей карте","урон ракетами в драках","поздний керри"],
+ 113:[.7,"пуш в две руки","поздний керри","контроль через Magnetic Field"],
+ 21:[.9,"керри через атаку","мид-гангер с Shackleshot","четвёрка с контролем"],
+ 22:[.7,"мид с уроном по всей карте","четвёрка-нюкер","поздний урон по площади"],
+ 76:[.6,"урон магией по одной цели","пуш и защита башен"],
+ 11:[.7,"урон по площади Raze","поздний керри","пуш и давление"],
+ 35:[.5,"урон издалека","пуш башен"],
+ 92:[.6,"контроль птицами","пуш и давление"],
+ 52:[.75,"пуш и урон по площади","мид-темп","поздний танк-маг"],
+ 43:[.6,"пуш волнами","драка 5 на 5"],
+ 45:[.6,"пуш башен","урон по одной цели"],
+ 6:[.5,"урон с руки","пуш"],95:[.6,"керри","мид с рывком"],42:[.5,"керри","оффлейн"],82:[.5,"убийца с ранних минут","поздний керри"],
+ 10:[.8,"урон с руки (ловкость)","танк через силу","копия врага для любой драки"],
+ 114:[.8,"керри","мид-гангер","охотник из засады"],
+ 120:[.8,"инициатор драк","керри через урон с руки","оффлейн"],
+ 107:[.7,"инициатор и спасатель","гангер","контроль"],
+ 49:[.8,"керри","мид","оффлейн"],
+ 36:[.8,"мид-танк и урон","оффлейн","керри"],
+ 47:[.7,"мид","оффлейн","керри"],
+ 101:[.6,"урон заклинаниями","мид"],
+ 26:[.7,"четвёрка-контроль","пятёрка"],40:[.8,"четвёрка","оффлейн","пуш"],7:[.8,"инициатор","четвёрка","пятёрка"],
+ 105:[.6,"мины и контроль карты","мид"],71:[.8,"гангер","оффлейн","четвёрка"],128:[.8,"мид","четвёрка","урон по площади"],
+ 123:[.6,"охотник","четвёрка"],86:[.7,"кражи заклинаний","контроль"],51:[.7,"инициатор","гангер"],100:[.7,"гангер","инициатор"],
+ 9:[.8,"четвёрка","мид","керри"],14:[.8,"гангер с хуками","оффлейн-танк","мид"],19:[.9,"мид","керри","четвёрка"],23:[.8,"мид","оффлейн","керри"],
+ 63:[.6,"керри","четвёрка"],93:[.4,"керри"],44:[.5,"керри"],1:[.3,"фарм-керри"],67:[.5,"керри"],109:[.5,"керри","пуш"],94:[.4,"керри"],
+ 61:[.4,"пуш"],80:[.7,"керри","мид","оффлейн"],89:[.5,"керри","пуш"],12:[.5,"керри"],46:[.4,"убийца одной цели"]
+};
+const vers = id => (VERS[id]||[0.6])[0];
+function waysOf(id){
+  const v = VERS[id];
+  if(v && v.length>1) return v.slice(1);
+  const d = heroDims(id); return DK.filter(k=>d[k]>=1).slice(0,2).map(k=>DIMS[k].s);
+}
+// what the player is looking for in a game, read from behaviour
+function gameplayWant(prof, nd, mn, mot){
+  const w = [];
+  w.push(DIMS[prof.order[0]].s); w.push(DIMS[prof.order[1]].s);
+  if(nd){ if(nd.start>=0.55) w.push("чтобы начало игры не было мучением"); if(nd.depth>=0.6) w.push("чтобы было что осваивать годами"); if(nd.ranged!=null && nd.ranged>=0.65) w.push("дальний бой"); }
+  if(mn){ if(mn.mob>=0.5) w.push("мобильность"); if(mn.planB>=0.65) w.push("пользу в драке, даже если убить не вышло"); if(mn.push>=0.45) w.push("давить башни"); }
+  if(mot && mot.k==="seeker") w.push("героя, который не надоест");
+  return [...new Set(w)].slice(0,6);
+}
 
 /* ===== Main screen v3: role verdict → hero for life → three different alternatives ===== */
 function diffLine(h, main){
@@ -1958,15 +2020,15 @@ function drawResult(){
   const maxE = Math.max(...(L?L.heroes:[]).map(h=>h.enjoy),1);
   const playedC = (L?L.heroes:[]).filter(h=>h.g>=10 && !ban.has(h.id) && onRole(h.id) && midOk(h.id))
     .map(h=>({...h, name:HERO[h.id]?.n, slug:HERO[h.id]?.s}));
-  const base = {...PREFS, roles:[String(pos)], _main: mn, _quad: Q, _seeker: mot && mot.k==="seeker", _mid: d.midStats||null};
+  const base = {...PREFS, roles:[String(pos)], _main: mn, _quad: Q, _seeker: mot && mot.k==="seeker", _mid: d.midStats||null, _maxG:10};
   const fresh = (()=>{ const r = pickMagic(a, beh, prof, base, null, nd); return [...r.top, ...r.rest]; })()
-    .filter(h=>!ban.has(h.id) && h.g<10 && onRole(h.id)).slice(0,6)
+    .filter(h=>!ban.has(h.id) && h.g<10 && onRole(h.id)).slice(0,8)
     .map(h=>({id:h.id, g:h.g, name:h.name, slug:h.slug, learn:LEARN(h.id), why:h.why}));
   const all = [...playedC, ...fresh].map(h=>({...h, life: lifeScore(h, L, prof, nd, mn, maxE, PREFS)})).sort((x,y)=>y.life-x.life);
   const hero = all[0];
-  const alts = []; for(const h of all.slice(1)){ if(alts.length>=3) break;
+  const alts = []; for(const h of all.slice(1)){ if(alts.length>=2) break;
     if(alts.some(x=>heroDims(x.id) && DK.filter(k=>heroDims(x.id)[k]===1)[0]===DK.filter(k=>heroDims(h.id)[k]===1)[0] && x.g>=10===h.g>=10)) continue; alts.push(h); }
-  for(const h of all.slice(1)){ if(alts.length>=3) break; if(!alts.includes(h)) alts.push(h); }
+  for(const h of all.slice(1)){ if(alts.length>=2) break; if(!alts.includes(h)) alts.push(h); }
   const k1=prof.order[0], k2=prof.order[1];
   const layerRows = h => heroVerdictLines(h, L).map(x=>`<div class="lr"><span class="lk ${x.v>0.02?"up":x.v<-0.02?"down":""}">${esc(x.k)}</span><span>${esc(x.t)}</span></div>`).join("");
 
@@ -1975,6 +2037,8 @@ function drawResult(){
     <div class="avatar">${p.avatarfull?`<img src="${esc(p.avatarfull)}" alt="" onerror="this.parentElement.textContent='${esc(initials(p.personaname||"?"))}'">`:esc(initials(p.personaname||"?"))}</div>
     <div class="who"><div class="name">${esc(p.personaname||"Игрок "+p.account_id)}</div><div class="muted" style="font-size:13px">${L?`Разобрано ${L.rows.length} ${plural(L.rows.length,"игра","игры","игр")}`:`${a.games} игр`} · ${pct(a.p0)}% побед · ${esc(medal)}${mot?` · ${esc(mot.t.toLowerCase())}`:""} · стиль: ${esc(DIMS[k1].t.toLowerCase())}, ${esc(DIMS[k2].t.toLowerCase())}</div></div>
   </div>
+
+  <section class="want"><span class="eyebrow">Что ты ищешь в игре</span><div class="wantchips">${gameplayWant(prof, nd, mn, mot).map(w=>`<span class="chip">${esc(cap(w))}</span>`).join("")}</div><div class="muted" style="font-size:13px">Это видно по тому, к каким героям ты возвращаешься, кого бросаешь и как играешь. Ниже всё подбирается под это.</div></section>
 
   ${RV?`<section class="rolev">
     <span class="eyebrow">Роль</span>
@@ -1990,6 +2054,8 @@ function drawResult(){
       <div class="big-b">
         <h2>${esc(hero.name)}</h2>
         <p class="story">${esc(lifeSentence(hero, L))}</p>
+        <div class="ways"><div class="mini">Как на нём можно играть</div><ul>${waysOf(hero.id).map(w=>`<li>${esc(cap(w))}</li>`).join("")}</ul>
+          ${vers(hero.id)>=0.75?`<div class="wv">Если против тебя неудобный пик — меняешь сборку и стиль, а не героя.</div>`:""}</div>
         <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Беру</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
     </article>
@@ -1997,11 +2063,12 @@ function drawResult(){
   </section>`:`<div class="notice">Под эту роль героев не нашлось. Выбери другую роль выше.</div>`}
 
   ${alts.length?`<section class="alts">
-    <span class="eyebrow">Не то? Ещё три варианта — они разные</span>
-    <div class="alt3">${alts.map(h=>`<article class="hc">
+    <span class="eyebrow">Не то? Ещё пара вариантов — они разные</span>
+    <div class="alt2">${alts.map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
       <div class="hc-b"><div class="hc-n">${esc(h.name)}</div>
         <div class="dl">${esc(diffLine(h, hero))}</div>
+        <div class="bw">Играть можно: ${esc(waysOf(h.id).slice(0,2).join("; "))}.</div>
         <div class="layers sm">${heroVerdictLines(h, L).slice(0,3).map(x=>`<div class="lr"><span class="lk ${x.v>0.02?"up":x.v<-0.02?"down":""}">${esc(x.k)}</span><span>${esc(x.t)}</span></div>`).join("")}</div>
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Беру</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>
   </section>`:""}
