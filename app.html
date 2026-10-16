@@ -1142,7 +1142,9 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     const m = a.meta[id] ?? null;
     const sd = nd ? sdFit(id, nd) : 0;
     const atkPen = (!prefs.atk.length && nd && nd.ranged!=null) ? Math.max(0, (ranged ? 1-nd.ranged : nd.ranged) - 0.35) * 70 : 0;
-    const score = sim*60 + sd - atkPen + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
+    const mf = mainFit(id, prefs._main);
+    const primary = ps[0];
+    const score = sim*60 + sd - atkPen + mf + (pred*0.5 + fit*100*0.2 + (m!=null?(m-0.5)*100*0.35:0))*wStat;
     // reasons
     const why = [];
     const maxE = Math.max(...loved.map(x=>x.enjoy||1),1);
@@ -1160,10 +1162,14 @@ function pickMagic(a, beh, prof, prefs, roles, nd){
     if(novel) why.push(`И новое для тебя: ${DIMS[novel].s}.`);
     const br = sdBridge(id, beh); if(br) why.unshift(br);
     if(m!=null && m>=0.52) why.push(`Сейчас силён на твоём ранге: ${Math.round(m*100)}% побед.`);
-    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
+    out.push({id, name:HERO[id].n, slug:HERO[id].s, cx, ranged, g, sim, score, why:why.slice(0,3), dims:DK.filter(k=>hd[k]===1), pos:ps, primary, mob:heroMob(id), kill:heroKill(id), push:heroPush(id), rolePos:(ps.split("").find(x=>useRoles.includes(x))||ps[0]), start:heroStart(id), depth:heroDepth(id)});
   }
   out.sort((x,y)=>y.score-x.score);
   // keep the three picks different from each other
+  // main pick: a hero whose own position is your main role
+  const mainRole = String(prefs.roles.length ? prefs.roles[0] : (roles ? roles.main[0] : ""));
+  const mainIdx = mainRole ? out.findIndex(h=>h.primary===mainRole) : 0;
+  if(mainIdx>0){ const [h]=out.splice(mainIdx,1); out.unshift(h); }
   const res=[], later=[];
   for(const h of out){ if(res.length>=3) break; if(res.some(r=>r.dims[0]===h.dims[0])) later.push(h); else res.push(h); }
   while(res.length<3 && later.length) res.push(later.shift());
@@ -1306,6 +1312,21 @@ function story(h, mot, beh, nd, a){
   if(pain && h.start>=0.5) p.push(`И в отличие от ${HERO[pain.id].n}, начинать на нём не больно.`);
   p.push(`Сыграй на нём ${mot && mot.k==="seeker" ? "30 игр подряд, не переключаясь" : "15 игр подряд"} — и про тебя начнут говорить: «а, это тот самый ${h.name}».`);
   return p.join(" ");
+}
+
+/* ===== Mobility, kill speed, push: what a main hero must have ===== */
+function heroMob(id){ const h=HERO[id], d=heroDims(id); if(!h) return 0; return Math.min(1, (h.r.includes("Escape")?0.45:0) + d.R*0.55 + (d.M>=1?0.1:0)); }
+function heroKill(id){ const h=HERO[id], d=heroDims(id); if(!h) return 0; return Math.min(1, (h.r.includes("Nuker")?0.4:0) + d.A*0.5 + d.B*0.15 + (d.E>=1?0.1:0)); }
+function heroPush(id){ const h=HERO[id], d=heroDims(id); if(!h) return 0; return Math.min(1, (h.r.includes("Pusher")?0.6:0) + d.S*0.4 + (d.L>=1?0.1:0)); }
+function mainNeeds(beh){
+  if(!beh || !beh.loved.length) return null;
+  const tot = beh.loved.reduce((s,h)=>s+h.enjoy,0)||1, avgf = f => beh.loved.reduce((s,h)=>s+f(h.id)*h.enjoy,0)/tot;
+  return {mob:avgf(heroMob), kill:avgf(heroKill), push:avgf(heroPush)};
+}
+function mainFit(id, mn){
+  if(!mn) return 0;
+  const gap = (v,need) => Math.max(0, need - v);
+  return -(gap(heroMob(id),mn.mob)*45 + gap(heroKill(id),mn.kill)*40 + gap(heroPush(id),mn.push)*20);
 }
 
 /* ===== Rendering ===== */
@@ -1504,7 +1525,8 @@ function renderQuiz(){
 function render(d, isDemo){ const a=analyze(d); const beh=behaviour(d.matches, a.p0); STATE={d,a,beh,isDemo}; drawResult(); }
 const dotsCx = n => `<span class="cx" title="Сложность">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
 const dimTags = ks => ks.slice(0,3).map(k=>`<span class="dt">${esc(DIMS[k].t)}</span>`).join("");
-const sdTags = h => `<div class="sdt"><span>Старт: <b>${START_RU(h.start)}</b></span><span>Глубина: ${dotsCx(Math.round(h.depth*2)+1)}</span></div>`;
+const lvl = v => Math.max(1, Math.min(3, Math.round(v*2.4)+0));
+const sdTags = h => `<div class="sdt"><span>Старт: <b>${START_RU(h.start)}</b></span><span>Глубина ${dotsCx(Math.round(h.depth*2)+1)}</span><span>Мобильность ${dotsCx(lvl(h.mob))}</span><span>Убийство ${dotsCx(lvl(h.kill))}</span><span>Пуш ${dotsCx(lvl(h.push))}</span></div>`;
 
 function drawResult(){
   if(!STATE) return;
@@ -1516,7 +1538,7 @@ function drawResult(){
   const prof = buildProfile(beh, a.heroes, PREFS.quiz, {skills:a.skills, likeIds:PREFS.like, banIds:PREFS.ban});
   const mot = motivation(beh, a);
   const nd = needs(beh, a, {...PREFS, _seeker: mot && mot.k==="seeker"});
-  const {top, rest} = pickMagic(a, beh, prof, PREFS, roles, nd);
+  const {top, rest} = pickMagic(a, beh, prof, {...PREFS, _main: mainNeeds(beh)}, roles, nd);
   const curRoles = PREFS.roles.length ? PREFS.roles.map(Number) : (roles?roles.main:[]);
   const ins = insights(beh, a);
   const k1=prof.order[0], k2=prof.order[1];
@@ -1556,7 +1578,7 @@ function drawResult(){
       <div class="big-b">
         <h2>${esc(hero.name)}</h2>
         <div class="tags">${dimTags(hero.dims)}</div>${sdTags(hero)}
-        <div class="hc-m"><span class="rc">${esc(POS[hero.rolePos])}</span> ${meta(hero)}</div>
+        <div class="hc-m"><span class="rc">на ${esc(POS[hero.rolePos].toLowerCase())}</span> ${meta(hero)}</div>
         <p class="story">${esc(story(hero, mot, beh, nd, a))}</p>
         <div class="btns"><button type="button" class="yes" data-id="${hero.id}">Беру</button><button type="button" class="nope" data-id="${hero.id}">Не моё</button></div>
       </div>
@@ -1564,7 +1586,7 @@ function drawResult(){
     ${top.length>1?`<div class="eyebrow" style="margin-top:8px">Если не зайдёт — запасные</div>
     <div class="duo">${top.slice(1).map(h=>`<article class="hc">
       <div class="hc-img">${heroImg(h,false,true)}</div>
-      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">${esc(POS[h.rolePos])}</span> ${meta(h)}</div>${why(h)}
+      <div class="hc-b"><div class="hc-n">${esc(h.name)}</div><div class="tags">${dimTags(h.dims)}</div>${sdTags(h)}<div class="hc-m"><span class="rc">на ${esc(POS[h.rolePos].toLowerCase())}</span> ${meta(h)}</div>${why(h)}
         <div class="btns"><button type="button" class="yes" data-id="${h.id}">Интересно</button><button type="button" class="nope" data-id="${h.id}">Не моё</button></div></div></article>`).join("")}</div>`:""}
     ${rest.length?`<div class="more"><span class="muted">Если и эти не то:</span>${rest.map(h=>`<span class="mh2">${heroImg(h,true)}${esc(h.name)}</span>`).join("")}</div>`:""}
     <div class="posline">«Беру» или «Интересно» — подберу ещё похожих. «Не моё» — уберу и учту почему.</div>
